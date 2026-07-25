@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getQrCard, saveQrCard, type QrCardState } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import QRCode from "react-qr-code";
 
 type CardDesign = "Wallet" | "Minimal" | "Dark" | "Hospital" | "Keychain" | "Sticker" | "Wallpaper" | "Watch" | "NFC";
 const DESIGNS: CardDesign[] = ["Wallet", "Hospital", "Minimal", "Dark", "Keychain", "Sticker", "Wallpaper", "Watch", "NFC"];
@@ -165,7 +166,7 @@ function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isG
         <h2 className="text-xl font-black uppercase tracking-tight relative z-10 leading-none mb-1">{data.name}</h2>
         <p className="text-xs font-bold text-red-600 relative z-10 mb-2">SCAN IN EMERGENCY</p>
         <div className="relative h-24 w-24 rounded-lg bg-white overflow-hidden flex items-center justify-center shadow-md p-1 z-10">
-          {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <div className="w-full h-full bg-slate-900 rounded" />}
+          {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <QRCode value={data.shareUrl} size={150} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 150 150`} />}
         </div>
         <p className="text-[10px] font-mono font-bold mt-2 relative z-10 text-slate-500">ID: {data.id}</p>
       </div>
@@ -180,7 +181,7 @@ function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isG
           <p className="text-[10px] font-bold text-red-500 uppercase">Emergency ID</p>
         </div>
         <div className="relative h-20 w-20 rounded-md bg-white overflow-hidden flex items-center justify-center p-1">
-          {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <div className="w-full h-full bg-slate-900 rounded-sm" />}
+          {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin text-primary" /> : <QRCode value={data.shareUrl} size={150} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 150 150`} />}
         </div>
         <div className="w-full text-center mt-2">
           <p className="text-[10px] text-white font-bold">{data.bloodGroup}</p>
@@ -204,7 +205,7 @@ function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isG
         </div>
 
         <div className="relative h-24 w-24 rounded-lg bg-white overflow-hidden flex items-center justify-center p-1 shadow-inner my-3">
-           {isGenerating ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <div className="w-full h-full bg-slate-900 rounded" />}
+           {isGenerating ? <RefreshCw className="h-5 w-5 animate-spin text-primary" /> : <QRCode value={data.shareUrl} size={150} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 150 150`} />}
         </div>
 
         <div className="w-full text-center">
@@ -232,7 +233,7 @@ function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isG
           <h2 className="text-lg font-bold uppercase tracking-widest text-white">{data.name}</h2>
           <p className="text-[10px] text-red-300 uppercase font-bold mt-1">ICE Contact: {data.contact}</p>
           <div className="relative h-32 w-32 rounded-xl bg-white overflow-hidden flex items-center justify-center p-1 mt-4">
-            {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <div className="w-full h-full bg-slate-900 rounded-lg" />}
+            {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <QRCode value={data.shareUrl} size={150} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 150 150`} />}
           </div>
           <p className="text-[9px] font-bold uppercase tracking-widest mt-3 text-white/60">Scan in emergency</p>
         </div>
@@ -307,7 +308,7 @@ function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isG
 
         <div className={cn("rounded-xl p-2 shadow-sm border", isDarkText ? "bg-white border-slate-200" : "bg-white border-white/20")}>
           <div className="relative h-20 w-20 rounded-lg bg-white overflow-hidden flex items-center justify-center">
-            {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <div className="w-full h-full p-1 border-2 border-slate-900 rounded-md"><div className="w-full h-full bg-slate-900 rounded-sm opacity-80"/></div>}
+            {isGenerating ? <RefreshCw className="h-6 w-6 animate-spin text-primary" /> : <div className="w-full h-full p-1 border-2 border-slate-900 rounded-md bg-white"><QRCode value={data.shareUrl} size={150} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 150 150`} /></div>}
           </div>
         </div>
       </div>

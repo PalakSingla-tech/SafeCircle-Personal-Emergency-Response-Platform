@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -38,7 +38,9 @@ const MOCK_DATA = {
   ]
 };
 
-export default function EmergencyScanPage({ params }: { params: { id: string } }) {
+export default function EmergencyScanPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = use(params);
+  const id = unwrappedParams.id;
   const [wizardStep, setWizardStep] = useState<number>(0);
   // 0 = Not started (Viewing Data)
   // 1 = Need Help? (Assess)
@@ -50,7 +52,7 @@ export default function EmergencyScanPage({ params }: { params: { id: string } }
 
   useEffect(() => {
     let isMounted = true;
-    getPublicScanData(params.id)
+    getPublicScanData(id)
       .then((data) => {
         if (isMounted) {
           setScanData(data);
@@ -66,13 +68,13 @@ export default function EmergencyScanPage({ params }: { params: { id: string } }
     return () => {
       isMounted = false;
     };
-  }, [params.id]);
+  }, [id]);
 
   const handleStartAssist = () => setWizardStep(1);
 
   const handleNotifyAndShare = async () => {
     try {
-      await notifyEmergency(params.id, "Responder's Location");
+      await notifyEmergency(id, "Responder's Location");
     } catch {
       console.error("Failed to notify emergency");
     }

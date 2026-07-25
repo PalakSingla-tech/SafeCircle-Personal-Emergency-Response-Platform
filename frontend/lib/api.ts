@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "http://localhost:8080";
+const DEFAULT_BASE_URL = "/api";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
 const AUTH_TOKEN_STORAGE_KEY = "safecircle_auth_token";
@@ -19,7 +19,8 @@ export function getAuthToken() {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
-  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${API_BASE_URL}${normalizedPath}`;
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -29,16 +30,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
 
+  const detail = await response.text().catch(() => "");
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
     throw new Error(detail || `Request failed with status ${response.status}`);
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || !detail) {
     return null as T;
   }
 
-  return (await response.json()) as T;
+  try {
+    return JSON.parse(detail) as T;
+  } catch {
+    return null as T;
+  }
 }
 
 export interface EmergencyContact {
@@ -130,7 +136,8 @@ export interface LoginRequestPayload {
 }
 
 export interface LoginResponsePayload {
-  token: string;
+  token?: string;
+  jwt?: string;
   email?: string;
   name?: string;
 }
@@ -159,8 +166,8 @@ export async function login(payload: LoginRequestPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (response?.token) {
-    setAuthToken(response.token);
+  if (response?.token || response?.jwt) {
+    setAuthToken(response.token || response.jwt || null);
   }
 
   return response;

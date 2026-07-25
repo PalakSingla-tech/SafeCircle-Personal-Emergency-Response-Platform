@@ -11,72 +11,60 @@ import {
   Ambulance,
   CheckCircle2,
   CheckCircle,
-  MoreHorizontal
+  MoreHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { getNotifications, markNotificationsAsRead, type NotificationItem } from "@/lib/api";
 
-const NOTIFICATIONS_DATA = [
+const NOTIFICATIONS_DATA: NotificationItem[] = [
   {
     id: "notif-1",
     title: "Ambulance Dispatched",
-    description: "Paramedic Unit #42 is en route to Robert Jenkins.",
+    description: "Paramedic Unit 108 is en route to Rahul Sharma.",
     time: "2 mins ago",
     read: false,
     type: "critical",
-    icon: Ambulance
+    icon: "Ambulance",
   },
   {
     id: "notif-2",
     title: "Hospital Viewed Profile",
-    description: "City General Hospital has accessed the medical file for Robert Jenkins.",
+    description: "AIIMS New Delhi has accessed the medical file for Rahul Sharma.",
     time: "5 mins ago",
     read: false,
     type: "info",
-    icon: Building2
+    icon: "Building2",
   },
   {
     id: "notif-3",
     title: "Emergency Contact Accepted",
-    description: "Mary Miller has accepted the emergency alert.",
+    description: "Priya Sharma has accepted the emergency alert.",
     time: "10 mins ago",
     read: false,
     type: "success",
-    icon: UserCheck
+    icon: "UserCheck",
   },
-  {
-    id: "notif-4",
-    title: "Emergency Activated",
-    description: "An emergency session was initiated for Robert Jenkins.",
-    time: "12 mins ago",
-    read: true,
-    type: "critical",
-    icon: AlertTriangle
-  },
-  {
-    id: "notif-5",
-    title: "QR Code Scanned",
-    description: "Robert Jenkins's emergency QR card was scanned in Downtown.",
-    time: "14 mins ago",
-    read: true,
-    type: "warning",
-    icon: Activity
-  },
-  {
-    id: "notif-6",
-    title: "Medical Profile Updated",
-    description: "You successfully updated the medications list for James Jenkins.",
-    time: "2 days ago",
-    read: true,
-    type: "info",
-    icon: CheckCircle2
-  }
 ];
 
+const ICON_MAP: Record<string, LucideIcon> = {
+  Ambulance,
+  Building2,
+  UserCheck,
+  AlertTriangle,
+  Activity,
+  CheckCircle2,
+  CheckCircle,
+  Bell,
+  HeartPulse,
+  PhoneCall,
+};
+
+
 export function NotificationsClient() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(NOTIFICATIONS_DATA);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -88,8 +76,9 @@ export function NotificationsClient() {
         if (isMounted) {
           setNotifications(data);
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
+          console.error("Failed to fetch notifications:", error);
           setNotifications(NOTIFICATIONS_DATA);
         }
       } finally {
@@ -160,7 +149,7 @@ export function NotificationsClient() {
           <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
             <div className="divide-y divide-border">
               {notifications.map((notif) => {
-                const Icon = notif.icon;
+                const Icon = ICON_MAP[notif.icon] ?? Bell;
                 return (
                   <div 
                     key={notif.id} 

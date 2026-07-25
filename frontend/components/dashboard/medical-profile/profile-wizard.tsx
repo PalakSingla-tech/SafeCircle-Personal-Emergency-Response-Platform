@@ -69,16 +69,19 @@ export function MedicalProfileWizard() {
   const [updated, setUpdated] = useState(false);
 
   useEffect(() => {
-    setData(loadProfile());
+    loadProfile().then(profile => {
+      if (profile) setData(profile);
+    });
   }, []);
 
   const completion = calculateCompletion(data);
 
   useEffect(() => {
-    saveDraft(data);
-    setDraftSaved(true);
-    const t = setTimeout(() => setDraftSaved(false), 2000);
-    return () => clearTimeout(t);
+    saveDraft(data).then(() => {
+      setDraftSaved(true);
+      const t = setTimeout(() => setDraftSaved(false), 2000);
+      return () => clearTimeout(t);
+    });
   }, [data]);
 
   const update = (key: keyof MedicalProfileData, value: string) => {
@@ -98,17 +101,15 @@ export function MedicalProfileWizard() {
 
   const goPrev = () => setStep((s) => Math.max(s - 1, 0));
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     setSaving(true);
-    setTimeout(() => {
-      saveDraft(data);
-      setSaving(false);
-      setDraftSaved(true);
-      setTimeout(() => setDraftSaved(false), 2500);
-    }, 400);
+    await saveDraft(data);
+    setSaving(false);
+    setDraftSaved(true);
+    setTimeout(() => setDraftSaved(false), 2500);
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     const allErrors: Errors = {};
     for (let i = 0; i < STEPS.length; i++) {
       Object.assign(allErrors, validateStep(i, data));
@@ -123,12 +124,15 @@ export function MedicalProfileWizard() {
       return;
     }
     setSaving(true);
-    setTimeout(() => {
-      saveProfile(data);
-      setSaving(false);
+    try {
+      await saveProfile(data);
       setUpdated(true);
       setSaved(true);
-    }, 600);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const StepIcon = stepIcons[step];

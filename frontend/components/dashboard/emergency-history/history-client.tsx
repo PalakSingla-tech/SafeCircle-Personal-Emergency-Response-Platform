@@ -11,9 +11,9 @@ const HISTORY_DATA = [
     id: "EV-2026-89",
     date: "Jul 18, 2026",
     time: "14:32 PM",
-    location: "Metro Station, Downtown",
-    responder: "Paramedic Unit #42",
-    hospital: "City General Hospital",
+    location: "Rajiv Chowk Metro Station, Delhi",
+    responder: "Ambulance Unit 108",
+    hospital: "AIIMS New Delhi",
     type: "Allergic Reaction",
     status: "Resolved",
   },
@@ -21,28 +21,19 @@ const HISTORY_DATA = [
     id: "EV-2025-42",
     date: "Nov 03, 2025",
     time: "09:15 AM",
-    location: "Central Park, West Gate",
+    location: "Connaught Place, Delhi",
     responder: "Public Good Samaritan",
     hospital: "N/A - Treated on site",
     type: "Asthma Attack",
     status: "Resolved",
   },
-  {
-    id: "EV-2024-12",
-    date: "Feb 22, 2024",
-    time: "18:45 PM",
-    location: "State Highway 14, Mile 22",
-    responder: "Highway Patrol & EMS",
-    hospital: "County Medical Center",
-    type: "Traffic Accident",
-    status: "Archived",
-  },
 ];
+
 
 export function HistoryClient() {
   const [search, setSearch] = useState("");
   const [date, setDate] = useState("");
-  const [events, setEvents] = useState<EmergencyHistoryEvent[]>(HISTORY_DATA);
+  const [events, setEvents] = useState<EmergencyHistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,8 +44,9 @@ export function HistoryClient() {
         if (isMounted) {
           setEvents(data);
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
+          console.error("Failed to fetch history:", error);
           setEvents(HISTORY_DATA);
         }
       } finally {

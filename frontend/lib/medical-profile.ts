@@ -46,26 +46,53 @@ export const emptyProfile: MedicalProfileData = {
 export const PROFILE_STORAGE_KEY = "safecircle_medical_profile";
 export const PROFILE_DRAFT_KEY = "safecircle_medical_profile_draft";
 
-export function loadProfile(): MedicalProfileData {
-  if (typeof window === "undefined") return emptyProfile;
+import { getMedicalProfile, saveMedicalProfile as apiSaveMedicalProfile, saveMedicalProfileDraft as apiSaveMedicalProfileDraft } from "./api";
+
+export async function loadProfile(): Promise<MedicalProfileData> {
   try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (raw) return { ...emptyProfile, ...JSON.parse(raw) };
-    const draft = localStorage.getItem(PROFILE_DRAFT_KEY);
-    if (draft) return { ...emptyProfile, ...JSON.parse(draft) };
-  } catch {
-    /* ignore */
+    const data = await getMedicalProfile();
+    if (data && Object.keys(data).length > 0) {
+      return { ...emptyProfile, ...data };
+    }
+  } catch (error) {
+    console.error("Failed to load medical profile from API:", error);
+  }
+  
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (raw) return { ...emptyProfile, ...JSON.parse(raw) };
+      const draft = localStorage.getItem(PROFILE_DRAFT_KEY);
+      if (draft) return { ...emptyProfile, ...JSON.parse(draft) };
+    } catch {
+      /* ignore */
+    }
   }
   return emptyProfile;
 }
 
-export function saveProfile(data: MedicalProfileData) {
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
-  localStorage.removeItem(PROFILE_DRAFT_KEY);
+export async function saveProfile(data: MedicalProfileData): Promise<void> {
+  try {
+    await apiSaveMedicalProfile(data);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(data));
+      localStorage.removeItem(PROFILE_DRAFT_KEY);
+    }
+  } catch (error) {
+    console.error("Failed to save medical profile to API:", error);
+    throw error;
+  }
 }
 
-export function saveDraft(data: MedicalProfileData) {
-  localStorage.setItem(PROFILE_DRAFT_KEY, JSON.stringify(data));
+export async function saveDraft(data: MedicalProfileData): Promise<void> {
+  try {
+    await apiSaveMedicalProfileDraft(data);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PROFILE_DRAFT_KEY, JSON.stringify(data));
+    }
+  } catch (error) {
+    console.error("Failed to save medical profile draft to API:", error);
+  }
 }
 
 const fieldGroups: (keyof MedicalProfileData)[][] = [

@@ -33,6 +33,57 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { getDashboard, DashboardResponse } from "@/lib/api";
 
+const STATIC_DASHBOARD_DATA: DashboardResponse = {
+  userId: 1,
+  fullName: "Rahul Sharma",
+  email: "rahul.sharma@example.com",
+  completionPercentage: 85,
+  stats: {
+    qrScans: { value: 12, change: "+2", trend: "up" },
+    emergencyAlerts: { value: 1, change: "-1", trend: "down" },
+    savedContacts: { value: 2, change: "+1", trend: "up" },
+    familyMembers: { value: 1, change: "0", trend: "neutral" },
+  },
+  qrCodeStatus: {
+    active: true,
+    lastGenerated: "2 days ago",
+    totalScans: 12,
+  },
+  medicalProfileCompletion: [
+    { label: "Basic Info", value: 100 },
+    { label: "Medical Conditions", value: 100 },
+    { label: "Emergency Notes", value: 50 },
+  ],
+  qrScanData: [
+    { month: "Jan", scans: 2, alerts: 0 },
+    { month: "Feb", scans: 4, alerts: 1 },
+    { month: "Mar", scans: 3, alerts: 0 },
+    { month: "Apr", scans: 8, alerts: 0 },
+    { month: "May", scans: 5, alerts: 0 },
+    { month: "Jun", scans: 12, alerts: 1 },
+  ],
+  emergencyData: [
+    { month: "Jan", scans: 2, alerts: 0 },
+    { month: "Feb", scans: 4, alerts: 1 },
+    { month: "Mar", scans: 3, alerts: 0 },
+    { month: "Apr", scans: 8, alerts: 0 },
+    { month: "May", scans: 5, alerts: 0 },
+    { month: "Jun", scans: 12, alerts: 1 },
+  ],
+  recentScans: [
+    { id: 1, location: "Connaught Place, Delhi", time: "2 hours ago", type: "Medical Scan" },
+    { id: 2, location: "Rajiv Chowk Metro", time: "1 day ago", type: "Profile View" },
+  ],
+  recentActivity: [
+    { id: 1, title: "QR Code Scanned", desc: "Profile accessed in Delhi", time: "2 hours ago", icon: "ScanLine" },
+    { id: 2, title: "Emergency Contact Added", desc: "Priya Sharma added", time: "3 days ago", icon: "UserPlus" },
+  ],
+  emergencyContacts: [
+    { id: 1, name: "Priya Sharma", relationship: "Wife" },
+    { id: 2, name: "Amit Singh", relationship: "Friend" },
+  ],
+};
+
 const ICON_MAP: Record<string, any> = {
   BellRing,
   HeartPulse,
@@ -55,6 +106,7 @@ export default function DashboardPage() {
         if (mounted) setData(dashboardData);
       } catch (e) {
         console.error("Failed to load dashboard data", e);
+        if (mounted) setData(STATIC_DASHBOARD_DATA);
       } finally {
         if (mounted) setLoading(false);
       }
