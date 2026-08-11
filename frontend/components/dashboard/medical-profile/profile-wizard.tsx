@@ -36,6 +36,7 @@ import {
   ProfileSelect,
   ProfileSectionCard,
 } from "./profile-fields";
+import { toast } from "react-toastify";
 
 const stepIcons = [User, HeartPulse, AlertTriangle, Shield, Stethoscope];
 
@@ -128,8 +129,10 @@ export function MedicalProfileWizard() {
       await saveProfile(data);
       setUpdated(true);
       setSaved(true);
+      toast.success("Profile updated successfully!");
     } catch (e) {
       console.error(e);
+      toast.error("Failed to update profile.");
     } finally {
       setSaving(false);
     }
@@ -258,6 +261,7 @@ export function MedicalProfileWizard() {
             </ProfileField>
             <ProfileField label="Organ Donor" id="organDonor">
               <ProfileSelect id="organDonor" value={data.organDonor} onChange={(e) => update("organDonor", e.target.value)}>
+                <option value="">Select option</option>
                 <option value="no">No</option>
                 <option value="yes">Yes</option>
               </ProfileSelect>
@@ -326,12 +330,7 @@ export function MedicalProfileWizard() {
         </div>
       </div>
 
-      {updated && saved && (
-        <div className="flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700">
-          <CheckCircle2 className="h-4 w-4" />
-          Profile updated successfully! Your QR card will reflect these changes.
-        </div>
-      )}
+
     </div>
   );
 }

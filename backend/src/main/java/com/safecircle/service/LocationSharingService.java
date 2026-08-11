@@ -19,6 +19,7 @@ public class LocationSharingService {
 
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
+    private final com.safecircle.repository.FamilyMemberRepository familyMemberRepository;
     private final LocationSharingMapper locationSharingMapper;
 
     @Transactional
@@ -26,32 +27,67 @@ public class LocationSharingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Optional<Location> existingLocation = locationRepository.findByUser(user);
         Location location;
-
-        if (existingLocation.isPresent()) {
-            location = existingLocation.get();
-            location.setLatitude(request.getLatitude());
-            location.setLongitude(request.getLongitude());
+        if (request.getAlertId() != null) {
+            Optional<Location> existingLocation = locationRepository.findByAlertId(request.getAlertId());
+            if (existingLocation.isPresent()) {
+                location = existingLocation.get();
+                location.setLatitude(request.getLatitude());
+                location.setLongitude(request.getLongitude());
+            } else {
+                location = Location.builder()
+                        .user(user)
+                        .alertId(request.getAlertId())
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .build();
+            }
         } else {
-            location = Location.builder()
-                    .user(user)
-                    .latitude(request.getLatitude())
-                    .longitude(request.getLongitude())
-                    .build();
+            Optional<Location> existingLocation = locationRepository.findByUser(user);
+            if (existingLocation.isPresent()) {
+                location = existingLocation.get();
+                location.setLatitude(request.getLatitude());
+                location.setLongitude(request.getLongitude());
+            } else {
+                location = Location.builder()
+                        .user(user)
+                        .latitude(request.getLatitude())
+                        .longitude(request.getLongitude())
+                        .build();
+            }
         }
 
         Location saved = locationRepository.save(location);
         return locationSharingMapper.mapToDTO(saved);
     }
 
-    public LocationResponseDTO getLocation(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Location location = locationRepository.findByUser(user)
+    public LocationResponseDTO getLocation(Long alertId) {
+        Location location = locationRepository.findByAlertId(alertId)
                 .orElseThrow(() -> new RuntimeException("Location not found"));
 
         return locationSharingMapper.mapToDTO(location);
+    }
+
+    public java.util.List<LocationResponseDTO> getSharedLocations(Long currentUserId) {
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        java.util.List<com.safecircle.entity.FamilyMember> circlesImIn = familyMemberRepository.findByMemberUser(currentUser);
+        java.util.List<LocationResponseDTO> sharedLocations = new java.util.ArrayList<>();
+
+        for (com.safecircle.entity.FamilyMember fm : circlesImIn) {
+            // Find latest location of fm.getUser()
+            User sharingUser = fm.getUser();
+            Optional<Location> latestLocation = locationRepository.findByUser(sharingUser);
+            
+            if (latestLocation.isPresent()) {
+                Location loc = latestLocation.get();
+                LocationResponseDTO dto = locationSharingMapper.mapToDTO(loc);
+                dto.setUserId(sharingUser.getId());
+                dto.setFullName(sharingUser.getFullName());
+                sharedLocations.add(dto);
+            }
+        }
+        return sharedLocations;
     }
 }

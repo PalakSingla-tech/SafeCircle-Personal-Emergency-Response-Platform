@@ -21,22 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getPublicScanData, notifyEmergency, type PublicScanData } from "@/lib/api";
 
-const MOCK_DATA = {
-  name: "Sarah Jenkins",
-  age: 41,
-  bloodGroup: "O+",
-  avatarInitials: "SJ",
-  medicalConditions: ["Type 2 Diabetes", "Asthma", "Hypertension"],
-  currentMedications: ["Metformin 500mg daily", "Albuterol Inhaler as needed", "Lisinopril 10mg"],
-  allergies: ["Penicillin", "Peanuts", "Latex"],
-  emergencyNotes: "Carries EpiPen in left pocket. Pacemaker implanted in 2021. Do NOT administer NSAIDs.",
-  doctorInfo: "Dr. Emily Chen - +1 (555) 987-6543",
-  primaryHospital: "City General Hospital",
-  contacts: [
-    { name: "David Jenkins", relationship: "Spouse", phone: "+1 (555) 123-4567", primary: true },
-    { name: "Mary Miller", relationship: "Sister", phone: "+1 (555) 456-7890", primary: false }
-  ]
-};
 
 export default function EmergencyScanPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = use(params);
@@ -47,8 +31,10 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
   // 2 = Notify Family & Share Location
   // 3 = Call Ambulance & Hospital Nav
 
-  const [scanData, setScanData] = useState<PublicScanData>(MOCK_DATA as any);
+  const [scanData, setScanData] = useState<PublicScanData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [alertId, setAlertId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -59,9 +45,9 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
           setIsLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (isMounted) {
-          // Fallback to mock data if error
+          setError(err.message || "Failed to load emergency profile.");
           setIsLoading(false);
         }
       });
@@ -74,7 +60,8 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
 
   const handleNotifyAndShare = async () => {
     try {
-      await notifyEmergency(id, "Responder's Location");
+      const result = await notifyEmergency(id, "Responder's Location");
+      setAlertId(result.alertId);
     } catch {
       console.error("Failed to notify emergency");
     }
@@ -83,6 +70,19 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50"><AlertTriangle className="h-8 w-8 animate-bounce text-red-500" /></div>;
+  }
+
+  if (error || !scanData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 text-center space-y-4">
+        <AlertTriangle className="h-12 w-12 text-red-500" />
+        <h2 className="text-2xl font-bold text-slate-800">Profile Not Found</h2>
+        <p className="text-slate-600">{error || "The emergency profile you are looking for does not exist or is inactive."}</p>
+        <Link href="/">
+          <Button variant="outline">Return Home</Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -284,7 +284,7 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
                 <Navigation className="mr-2 h-6 w-6" />
                 Navigate to Nearest Hospital
               </Button>
-              <Link href="/emergency-active" className="block w-full pt-4">
+              <Link href={`/emergency-active${alertId ? `?id=${alertId}` : ''}`} className="block w-full pt-4">
                 <Button variant="ghost" className="text-red-700 font-bold underline">
                   View Live Tracking Session
                 </Button>

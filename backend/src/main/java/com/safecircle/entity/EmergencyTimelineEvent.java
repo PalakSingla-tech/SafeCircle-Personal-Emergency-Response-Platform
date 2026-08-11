@@ -18,9 +18,8 @@ public class EmergencyTimelineEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "session_id", nullable = false)
-    private EmergencySession session;
+    @Column(name = "alert_id", nullable = false)
+    private Long alertId;
 
     @Column(nullable = false)
     private String eventLabel;

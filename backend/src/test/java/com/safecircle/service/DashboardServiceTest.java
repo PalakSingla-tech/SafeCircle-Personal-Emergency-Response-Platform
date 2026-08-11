@@ -25,6 +25,15 @@ class DashboardServiceTest {
     @Mock
     private EmergencyContactsService emergencyContactsService;
 
+    @Mock
+    private FamilyMemberService familyMemberService;
+
+    @Mock
+    private com.safecircle.repository.QrScanRepository qrScanRepository;
+
+    @Mock
+    private com.safecircle.repository.EmergencyHistoryRepository emergencyHistoryRepository;
+
     @InjectMocks
     private DashboardService dashboardService;
 
@@ -42,6 +51,8 @@ class DashboardServiceTest {
 
         when(medicalProfileService.getMedicalProfile(7L)).thenReturn(Optional.of(medicalProfile));
         when(emergencyContactsService.showContacts(7L)).thenReturn(List.of(contact));
+        when(qrScanRepository.findByUserIdOrderByTimestampDesc(7L)).thenReturn(java.util.Collections.emptyList());
+        when(emergencyHistoryRepository.findByUserIdOrderByCreatedAtDesc(7L)).thenReturn(java.util.Collections.emptyList());
 
         DashboardResponseDTO dashboard = dashboardService.getDashboardData(7L, user);
 

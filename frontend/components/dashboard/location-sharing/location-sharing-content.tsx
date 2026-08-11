@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { getLocationSharing, saveLocationSharing, type LocationShareState } from "@/lib/api";
+import { getLocationSharing, saveLocationSharing, getFamilyMembers, getEmergencyHistory, getSharedLocations, type LocationShareState, type FamilyMember, type EmergencyHistoryEvent, type SharedLocation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const LOCATION_KEY = "safecircle_location_settings";
@@ -43,17 +43,7 @@ const defaultSettings: LocationSettings = {
   duration: "always",
 };
 
-const circleMembers = [
-  { id: 1, name: "David Jenkins", relation: "Spouse", initials: "DJ", sharing: true, lastSeen: "2 min ago" },
-  { id: 2, name: "Mom", relation: "Family", initials: "MO", sharing: true, lastSeen: "15 min ago" },
-  { id: 3, name: "Dr. Emily Chen", relation: "Doctor", initials: "EC", sharing: false, lastSeen: "Never" },
-];
-
-const locationHistory = [
-  { id: 1, place: "Home — 123 Oak Street", time: "Now", type: "Current" },
-  { id: 2, place: "City General Hospital", time: "Yesterday, 3:42 PM", type: "Visit" },
-  { id: 3, place: "Downtown Office", time: "Mon, 9:15 AM", type: "Check-in" },
-];
+const defaultLocationHistory: any[] = [];
 
 const durationOptions = [
   { value: "always" as const, label: "Always", desc: "Share continuously with your circle" },
@@ -115,7 +105,43 @@ export function LocationSharingContent() {
     3: false,
   });
   const [locating, setLocating] = useState(false);
+  const [realMembers, setRealMembers] = useState<FamilyMember[]>([]);
+  const [realHistory, setRealHistory] = useState<any[]>(defaultLocationHistory);
   const [updated, setUpdated] = useState(false);
+  const [currentLocationText, setCurrentLocationText] = useState("Locating...");
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [sharedLocations, setSharedLocations] = useState<SharedLocation[]>([]);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      const geoId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          setLocationAccuracy(Math.round(pos.coords.accuracy));
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+            const data = await res.json();
+            if (data && data.address) {
+              const road = data.address.road || data.address.pedestrian || data.address.suburb || "";
+              const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
+              const short = [road, city].filter(Boolean).join(", ");
+              setCurrentLocationText(short || "Unknown Road");
+            } else {
+              setCurrentLocationText(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+            }
+          } catch (e) {
+            setCurrentLocationText(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+          }
+        },
+        (err) => {
+          setCurrentLocationText("Location unavailable");
+        },
+        { enableHighAccuracy: true }
+      );
+      return () => navigator.geolocation.clearWatch(geoId);
+    } else {
+      setCurrentLocationText("Location not supported");
+    }
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -131,6 +157,39 @@ export function LocationSharingContent() {
         });
       } catch {
         setSettings(loadSettings());
+      }
+      try {
+        const members = await getFamilyMembers();
+        if (members) {
+          setRealMembers(members);
+          const sharingObj: Record<number, boolean> = {};
+          members.forEach(m => { sharingObj[m.memberId] = true; });
+          setMemberSharing(sharingObj);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      try {
+        const history = await getEmergencyHistory();
+        if (history && history.length > 0) {
+          setRealHistory([
+            ...defaultLocationHistory,
+            ...history.map(h => ({
+              id: Number(h.id),
+              place: h.location || "Unknown Location",
+              time: `${h.date} ${h.time}`,
+              type: "Emergency Alert"
+            }))
+          ]);
+        }
+      } catch(err) {}
+      try {
+        const locations = await getSharedLocations();
+        if (locations) {
+          setSharedLocations(locations);
+        }
+      } catch (err) {
+        console.error(err);
       }
     };
 
@@ -197,27 +256,20 @@ export function LocationSharingContent() {
             title="Live Location"
             description="Your current position shared with trusted contacts"
             action={
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg"
-                onClick={refreshLocation}
-                disabled={locating || !settings.enabled}
-              >
-                {locating ? (
-                  <>
-                    <Radio className="h-4 w-4 animate-pulse" /> Updating...
-                  </>
-                ) : updated ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" /> Updated
-                  </>
-                ) : (
-                  <>
-                    <Navigation className="h-4 w-4" /> Refresh
-                  </>
-                )}
-              </Button>
+              settings.enabled ? (
+                <div className="flex items-center gap-2 rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-sm font-medium text-green-700 dark:text-green-400">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-500 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  </span>
+                  Live
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1 text-sm font-medium text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/50"></span>
+                  Paused
+                </div>
+              )
             }
           >
             <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/30">
@@ -269,8 +321,8 @@ export function LocationSharingContent() {
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-primary" />
                   <div>
-                    <p className="text-sm font-medium">123 Oak Street, San Francisco</p>
-                    <p className="text-xs text-muted-foreground">Updated just now · ±12m accuracy</p>
+                    <p className="text-sm font-medium">{currentLocationText}</p>
+                    <p className="text-xs text-muted-foreground">Updated just now {locationAccuracy ? `· ±${locationAccuracy}m accuracy` : ""}</p>
                   </div>
                 </div>
                 <Badge variant={settings.enabled ? "success" : "secondary"}>
@@ -286,8 +338,8 @@ export function LocationSharingContent() {
           <DashboardCard title="Sharing Status">
             <div className="space-y-3">
               {[
-                { label: "Circle members", value: "3", icon: Users },
-                { label: "Currently sharing with", value: "2", icon: Eye },
+                { label: "Circle members", value: realMembers.length.toString(), icon: Users },
+                { label: "Currently sharing with", value: Object.values(memberSharing).filter(Boolean).length.toString(), icon: Eye },
                 { label: "Last shared", value: "2 min ago", icon: Clock },
               ].map(({ label, value, icon: Icon }) => (
                 <div
@@ -386,30 +438,31 @@ export function LocationSharingContent() {
         description="Choose who can view your live location"
       >
         <div className="space-y-3">
-          {circleMembers.map((member) => (
+          {realMembers.length === 0 && <div className="text-center text-muted-foreground p-4">No circle members found. Add family members to share location.</div>}
+          {realMembers.map((member) => (
             <div
-              key={member.id}
+              key={member.memberId}
               className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{member.initials}</AvatarFallback>
+                  <AvatarFallback>{member.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">{member.name}</p>
+                  <p className="text-sm font-medium">{member.fullName}</p>
                   <p className="text-xs text-muted-foreground">
-                    {member.relation} · Last seen {member.lastSeen}
+                    {member.relationship}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Badge variant={memberSharing[member.id] ? "success" : "secondary"}>
-                  {memberSharing[member.id] ? "Can view" : "No access"}
+                <Badge variant={memberSharing[member.memberId] ? "success" : "secondary"}>
+                  {memberSharing[member.memberId] ? "Can view" : "No access"}
                 </Badge>
                 <Switch
-                  checked={memberSharing[member.id] ?? false}
+                  checked={memberSharing[member.memberId] ?? false}
                   onCheckedChange={(v) =>
-                    setMemberSharing((prev) => ({ ...prev, [member.id]: v }))
+                    setMemberSharing((prev) => ({ ...prev, [member.memberId]: v }))
                   }
                   disabled={!settings.enabled || !settings.shareWithCircle}
                 />
@@ -419,7 +472,49 @@ export function LocationSharingContent() {
         </div>
       </DashboardCard>
 
-      {/* Location history */}
+      {/* Locations Shared With Me */}
+      <DashboardCard
+        title="Locations Shared With Me"
+        description="Live locations of contacts who have added you to their circle"
+      >
+        <div className="space-y-3">
+          {sharedLocations.length === 0 && (
+            <div className="text-center text-muted-foreground p-4">No one is currently sharing their location with you.</div>
+          )}
+          {sharedLocations.map((loc) => (
+            <div
+              key={loc.id}
+              className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>{loc.fullName.substring(0,2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{loc.fullName}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="success" className="animate-pulse">Live</Badge>
+                <a
+                  href={`https://maps.google.com/?q=${loc.latitude},${loc.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button size="sm" variant="outline">
+                    View on Map
+                  </Button>
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+
       <DashboardCard
         title="Location History"
         description="Recent places you've been while sharing was active"
@@ -430,7 +525,10 @@ export function LocationSharingContent() {
         }
       >
         <div className="space-y-2">
-          {locationHistory.map((item) => (
+          {realHistory.length === 0 && (
+            <div className="text-center text-muted-foreground p-4">No location history found.</div>
+          )}
+          {realHistory.map((item) => (
             <div
               key={item.id}
               className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3 transition-colors hover:bg-muted/30"
@@ -460,8 +558,8 @@ export function LocationSharingContent() {
       <DashboardCard title="Connected Device">
         <SettingRow
           icon={Smartphone}
-          title="Sarah's iPhone 15"
-          description="Location sourced from this device · iOS 18.2"
+          title="Your Device"
+          description="Location sourced from this device"
         >
           <Badge variant="success" className="gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-green-500" />

@@ -30,4 +30,16 @@ public class AuthController {
     {
         return ResponseEntity.ok(authService.login(loginRequestDTO));
     }
+
+    @PostMapping({"/forgot-password", "/api/forgot-password", "/auth/forgot-password"})
+    public ResponseEntity<String> forgotPassword(@RequestBody com.safecircle.dto.ForgotPasswordRequestDTO requestDTO) {
+        authService.forgotPassword(requestDTO);
+        return ResponseEntity.ok("{\"message\":\"Password reset link sent\"}");
+    }
+
+    @PostMapping({"/reset-password", "/api/reset-password", "/auth/reset-password"})
+    public ResponseEntity<String> resetPassword(@RequestBody com.safecircle.dto.ResetPasswordRequestDTO requestDTO) {
+        authService.resetPassword(requestDTO);
+        return ResponseEntity.ok("{\"message\":\"Password updated successfully\"}");
+    }
 }

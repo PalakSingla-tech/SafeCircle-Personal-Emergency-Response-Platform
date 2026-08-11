@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "family_members", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"user_id", "member_user_id"})
+        @UniqueConstraint(columnNames = { "user_id", "member_user_id" })
 })
 @NoArgsConstructor
 @AllArgsConstructor

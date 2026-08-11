@@ -24,11 +24,16 @@ public class PublicScanController {
 
     @PostMapping("/{id}/notify")
     public ResponseEntity<?> notifyEmergency(@PathVariable Long id, @RequestBody(required = false) Map<String, String> payload) {
-        String location = null;
-        if (payload != null && payload.containsKey("location")) {
-            location = payload.get("location");
+        try {
+            String location = null;
+            if (payload != null && payload.containsKey("location")) {
+                location = payload.get("location");
+            }
+            Long alertId = publicScanService.notifyEmergency(id, location);
+            return ResponseEntity.ok(Map.of("alertId", alertId));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
-        publicScanService.notifyEmergency(id, location);
-        return ResponseEntity.ok().build();
     }
 }

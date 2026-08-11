@@ -33,4 +33,16 @@ public class SettingsController {
         settingsService.updatePassword(user.getId(), request);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping
+    public ResponseEntity<com.safecircle.dto.SettingsDTO> getSettings(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(settingsService.getUserSettings(user.getId()));
+    }
+
+    @PutMapping
+    public ResponseEntity<com.safecircle.dto.SettingsDTO> updateSettings(
+            @AuthenticationPrincipal User user,
+            @RequestBody com.safecircle.dto.SettingsDTO request) {
+        return ResponseEntity.ok(settingsService.updateUserSettings(user.getId(), request));
+    }
 }

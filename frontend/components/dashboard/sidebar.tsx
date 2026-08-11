@@ -49,6 +49,13 @@ export function Sidebar() {
           <Separator className="mb-3" />
           <Link
             href={logoutItem.href}
+            onClick={() => {
+              import('@/lib/api').then(({ setAuthToken }) => {
+                setAuthToken(null);
+                localStorage.removeItem("user_name");
+                localStorage.removeItem("user_email");
+              });
+            }}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <logoutItem.icon className="h-4 w-4" />

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Dialog } from "@/components/ui/dialog";
 import { getFamilyMembers, type FamilyMember } from "@/lib/api";
 
 const FAMILY_MEMBERS = [
@@ -40,8 +41,96 @@ const FAMILY_MEMBERS = [
 
 export function FamilyClient() {
   const [search, setSearch] = useState("");
-  const [members, setMembers] = useState<FamilyMember[]>(FAMILY_MEMBERS);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState(false);
+
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRelationship, setInviteRelationship] = useState("Parent");
+  const [inviteAccessStatus, setInviteAccessStatus] = useState("Emergency Only");
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
+  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [removeModalOpen, setRemoveModalOpen] = useState(false);
+
+  const [editRelationship, setEditRelationship] = useState("");
+  const [editAccessStatus, setEditAccessStatus] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const [selectedMemberProfile, setSelectedMemberProfile] = useState<any>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+  const getInitials = (name?: string) => {
+    if (!name) return "??";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+  };
+
+  const openView = async (member: FamilyMember) => {
+    setSelectedMember(member);
+    setViewModalOpen(true);
+    setSelectedMemberProfile(null);
+    setIsLoadingProfile(true);
+    try {
+      const { getFamilyMemberMedicalProfile } = await import("@/lib/api");
+      const profile = await getFamilyMemberMedicalProfile(member.id);
+      setSelectedMemberProfile(profile);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const openEdit = (member: FamilyMember) => {
+    setSelectedMember(member);
+    setEditRelationship(member.relationship);
+    setEditAccessStatus(member.accessStatus);
+    setEditModalOpen(true);
+  };
+
+  const openRemove = (member: FamilyMember) => {
+    setSelectedMember(member);
+    setRemoveModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMember) return;
+    setIsProcessing(true);
+    try {
+      const { updateFamilyMember } = await import("@/lib/api");
+      const updated = await updateFamilyMember(selectedMember.id, {
+        relationship: editRelationship,
+        accessStatus: editAccessStatus,
+      });
+      setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
+      setEditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!selectedMember) return;
+    setIsProcessing(true);
+    try {
+      const { deleteFamilyMember } = await import("@/lib/api");
+      await deleteFamilyMember(selectedMember.id);
+      setMembers(prev => prev.filter(m => m.id !== selectedMember.id));
+      setRemoveModalOpen(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -53,7 +142,7 @@ export function FamilyClient() {
         }
       } catch {
         if (isMounted) {
-          setMembers(FAMILY_MEMBERS);
+          setApiError(true);
         }
       } finally {
         if (isMounted) {
@@ -68,8 +157,36 @@ export function FamilyClient() {
     };
   }, []);
 
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError("");
+    setInviteSuccess(false);
+    setIsInviting(true);
+
+    try {
+      const { createFamilyMember } = await import("@/lib/api");
+      const newMember = await createFamilyMember({
+        email: inviteEmail,
+        relationship: inviteRelationship,
+        accessStatus: inviteAccessStatus,
+      });
+      
+      setMembers(prev => [...prev, newMember]);
+      setInviteSuccess(true);
+      setTimeout(() => {
+        setIsInviteModalOpen(false);
+        setInviteEmail("");
+        setInviteSuccess(false);
+      }, 1500);
+    } catch (err: any) {
+      setInviteError(err.message || "Failed to invite family member. Please check the email.");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   const filteredMembers = members.filter((member) =>
-    [member.name, member.relationship, member.medicalSummary, member.accessStatus].join(" ").toLowerCase().includes(search.toLowerCase())
+    [member.fullName, member.relationship, member.accessStatus].join(" ").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -94,7 +211,7 @@ export function FamilyClient() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button className="rounded-xl shrink-0">
+          <Button className="rounded-xl shrink-0" onClick={() => setIsInviteModalOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Invite Family Member
           </Button>
@@ -176,6 +293,17 @@ export function FamilyClient() {
         <div className="rounded-2xl border border-border bg-card/70 p-6 text-sm text-muted-foreground">
           Loading family member data from the API layer...
         </div>
+      ) : apiError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-600 shadow-sm dark:border-red-900/50 dark:bg-red-950/20">
+          <HeartPulse className="mx-auto mb-4 h-12 w-12 text-red-400 opacity-50" />
+          <h2 className="text-lg font-bold mb-2">Unable to connect to the backend</h2>
+          <p className="text-sm opacity-80">
+            We couldn't fetch your family members. Please make sure the server is running and try again.
+          </p>
+          <Button variant="outline" className="mt-6 border-red-200 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900" onClick={() => window.location.reload()}>
+            Retry Connection
+          </Button>
+        </div>
       ) : (
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredMembers.map((member) => (
@@ -186,10 +314,10 @@ export function FamilyClient() {
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary ring-2 ring-background shadow-inner">
-                  {member.photo}
+                  {getInitials(member.fullName)}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg leading-tight">{member.name}</h3>
+                  <h3 className="font-semibold text-lg leading-tight">{member.fullName}</h3>
                   <p className="text-sm text-muted-foreground">{member.relationship}</p>
                 </div>
               </div>
@@ -200,13 +328,13 @@ export function FamilyClient() {
                   </Button>
                 }
               >
-                <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg">
+                <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg" onClick={() => openView(member)}>
                   <FileText className="h-4 w-4" /> View Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg">
+                <DropdownMenuItem className="cursor-pointer gap-2 rounded-lg" onClick={() => openEdit(member)}>
                   <Edit2 className="h-4 w-4" /> Edit Access
                 </DropdownMenuItem>
-                <DropdownMenuItem destructive className="cursor-pointer gap-2 rounded-lg text-red-600 focus:text-red-600">
+                <DropdownMenuItem destructive className="cursor-pointer gap-2 rounded-lg text-red-600 focus:text-red-600" onClick={() => openRemove(member)}>
                   <Trash2 className="h-4 w-4" /> Remove
                 </DropdownMenuItem>
               </DropdownMenu>
@@ -216,10 +344,10 @@ export function FamilyClient() {
               <div className="rounded-xl bg-muted/40 p-3">
                 <div className="flex items-center gap-2 mb-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
                   <HeartPulse className="h-4 w-4 text-red-500" />
-                  Medical Summary
+                  Medical Profile
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {member.medicalSummary}
+                  Health profile available. Click View Profile to see details.
                 </p>
               </div>
 
@@ -235,7 +363,7 @@ export function FamilyClient() {
             </div>
 
             <div className="mt-6 flex items-center gap-2">
-              <Button variant="outline" className="w-full rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors">
+              <Button variant="outline" className="w-full rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors" onClick={() => openView(member)}>
                 View Profile
               </Button>
             </div>
@@ -243,7 +371,7 @@ export function FamilyClient() {
         ))}
         
         {/* Add New Card */}
-        <button className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 p-6 transition-colors hover:border-primary/40 hover:bg-primary/5 min-h-[250px]">
+        <button onClick={() => setIsInviteModalOpen(true)} className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-muted/10 p-6 transition-colors hover:border-primary/40 hover:bg-primary/5 min-h-[250px]">
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
             <Plus className="h-6 w-6" />
           </div>
@@ -254,6 +382,231 @@ export function FamilyClient() {
         </button>
       </div>
       )}
+
+      <Dialog open={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)}>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold">Invite Family Member</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add a trusted member to your safety circle.
+            </p>
+          </div>
+          
+          <form onSubmit={handleInviteSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">Email Address</label>
+              <Input
+                id="email"
+                type="email"
+                required
+                placeholder="family@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="relationship" className="text-sm font-medium">Relationship</label>
+              <select
+                id="relationship"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={inviteRelationship}
+                onChange={(e) => setInviteRelationship(e.target.value)}
+              >
+                <option value="Parent">Parent</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Child">Child</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="access" className="text-sm font-medium">Access Status</label>
+              <select
+                id="access"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={inviteAccessStatus}
+                onChange={(e) => setInviteAccessStatus(e.target.value)}
+              >
+                <option value="Emergency Only">Emergency Only</option>
+                <option value="Full Access">Full Access</option>
+              </select>
+            </div>
+
+            {inviteError && (
+              <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-lg">
+                {inviteError}
+              </div>
+            )}
+            
+            {inviteSuccess && (
+              <div className="text-sm text-green-500 bg-green-500/10 p-3 rounded-lg">
+                Successfully invited!
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setIsInviteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isInviting || inviteSuccess}>
+                {isInviting ? "Inviting..." : "Send Invite"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Dialog>
+
+      {/* View Profile Modal */}
+      <Dialog open={viewModalOpen} onClose={() => setViewModalOpen(false)}>
+        {selectedMember && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary ring-4 ring-background shadow-inner">
+                {getInitials(selectedMember.fullName)}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">{selectedMember.fullName}</h2>
+                <p className="text-muted-foreground">{selectedMember.relationship}</p>
+              </div>
+            </div>
+            
+            <div className="grid gap-4 bg-muted/30 p-4 rounded-xl">
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="font-medium text-muted-foreground">Email:</span>
+                <span className="col-span-2 font-medium break-words">{selectedMember.email}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="font-medium text-muted-foreground">Phone:</span>
+                <span className="col-span-2 font-medium">{selectedMember.phoneNumber || "Not provided"}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="font-medium text-muted-foreground">Access:</span>
+                <span className="col-span-2">
+                  <Badge variant="outline" className={selectedMember.accessStatus === "Full Access" ? "border-emerald-200 text-emerald-700 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-400" : ""}>
+                    {selectedMember.accessStatus}
+                  </Badge>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <span className="font-medium text-muted-foreground">Added:</span>
+                <span className="col-span-2 font-medium">
+                  {selectedMember.addedAt ? new Date(selectedMember.addedAt).toLocaleDateString() : "Unknown"}
+                </span>
+              </div>
+            </div>
+
+            {isLoadingProfile ? (
+              <div className="flex justify-center p-4">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              </div>
+            ) : selectedMemberProfile ? (
+              <div className="space-y-4 pt-4 border-t border-border/50">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <HeartPulse className="h-5 w-5 text-red-500" /> Medical Profile
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-muted/40 p-3 rounded-lg">
+                    <span className="block text-xs font-bold uppercase text-muted-foreground mb-1">Blood Type</span>
+                    <span className="font-medium">{selectedMemberProfile.bloodGroup || "Not provided"}</span>
+                  </div>
+                  <div className="bg-muted/40 p-3 rounded-lg">
+                    <span className="block text-xs font-bold uppercase text-muted-foreground mb-1">Allergies</span>
+                    <span className="font-medium text-red-600 dark:text-red-400">{selectedMemberProfile.allergies || "None reported"}</span>
+                  </div>
+                  <div className="bg-muted/40 p-3 rounded-lg sm:col-span-2">
+                    <span className="block text-xs font-bold uppercase text-muted-foreground mb-1">Medical Conditions</span>
+                    <span className="font-medium">{selectedMemberProfile.medicalConditions || "None reported"}</span>
+                  </div>
+                  <div className="bg-muted/40 p-3 rounded-lg sm:col-span-2">
+                    <span className="block text-xs font-bold uppercase text-muted-foreground mb-1">Emergency Notes</span>
+                    <span className="font-medium text-amber-700 dark:text-amber-500">{selectedMemberProfile.emergencyNotes || "None"}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-center text-sm text-muted-foreground border-t border-border/50 pt-6">
+                No medical profile available for this member.
+              </div>
+            )}
+
+            <div className="pt-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setViewModalOpen(false)}>Close</Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Edit Access Modal */}
+      <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold">Edit Access for {selectedMember?.fullName}</h2>
+          </div>
+          
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="edit-relationship" className="text-sm font-medium">Relationship</label>
+              <select
+                id="edit-relationship"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={editRelationship}
+                onChange={(e) => setEditRelationship(e.target.value)}
+              >
+                <option value="Parent">Parent</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Child">Child</option>
+                <option value="Spouse">Spouse</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="edit-access" className="text-sm font-medium">Access Status</label>
+              <select
+                id="edit-access"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={editAccessStatus}
+                onChange={(e) => setEditAccessStatus(e.target.value)}
+              >
+                <option value="Emergency Only">Emergency Only</option>
+                <option value="Full Access">Full Access</option>
+              </select>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessing}>
+                {isProcessing ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Dialog>
+
+      {/* Remove Confirmation Modal */}
+      <Dialog open={removeModalOpen} onClose={() => setRemoveModalOpen(false)}>
+        <div className="space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 mb-4">
+            <Trash2 className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold">Remove Family Member?</h2>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Are you sure you want to remove <strong>{selectedMember?.fullName}</strong> from your safety circle? This action cannot be undone.
+          </p>
+          <div className="pt-4 flex justify-center gap-3">
+            <Button variant="outline" onClick={() => setRemoveModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemove} disabled={isProcessing}>
+              {isProcessing ? "Removing..." : "Yes, Remove"}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }

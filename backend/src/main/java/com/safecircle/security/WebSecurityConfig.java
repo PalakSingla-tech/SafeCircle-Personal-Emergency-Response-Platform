@@ -55,6 +55,8 @@ public class WebSecurityConfig {
                             "/register", "/login",
                             "/api/register", "/api/login",
                             "/auth/register", "/auth/login",
+                            "/forgot-password", "/api/forgot-password", "/auth/forgot-password",
+                            "/reset-password", "/api/reset-password", "/auth/reset-password",
                             "/public/**"
                         )
                         .permitAll()

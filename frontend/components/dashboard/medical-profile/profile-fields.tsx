@@ -31,6 +31,7 @@ export function ProfileField({
 
 export function ProfileInput({
   className,
+  value,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
@@ -40,12 +41,14 @@ export function ProfileInput({
         className
       )}
       {...props}
+      value={value ?? ""}
     />
   );
 }
 
 export function ProfileTextarea({
   className,
+  value,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
@@ -55,6 +58,7 @@ export function ProfileTextarea({
         className
       )}
       {...props}
+      value={value ?? ""}
     />
   );
 }
@@ -62,6 +66,7 @@ export function ProfileTextarea({
 export function ProfileSelect({
   className,
   children,
+  value,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
@@ -71,6 +76,7 @@ export function ProfileSelect({
         className
       )}
       {...props}
+      value={value ?? ""}
     >
       {children}
     </select>

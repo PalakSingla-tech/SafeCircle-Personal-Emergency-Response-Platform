@@ -19,9 +19,12 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Column(name = "alert_id")
+    private Long alertId;
 
     @Column(precision = 10, scale = 8, nullable = false)
     private BigDecimal latitude;

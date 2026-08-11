@@ -7,9 +7,20 @@ import com.safecircle.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
+
+import com.safecircle.entity.EmergencyHistory;
+import com.safecircle.entity.QrScan;
+import com.safecircle.repository.EmergencyHistoryRepository;
+import com.safecircle.repository.QrScanRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +29,8 @@ public class DashboardService {
     private final MedicalProfileService medicalProfileService;
     private final EmergencyContactsService emergencyContactsService;
     private final FamilyMemberService familyMemberService;
+    private final QrScanRepository qrScanRepository;
+    private final EmergencyHistoryRepository emergencyHistoryRepository;
 
     public DashboardResponseDTO getDashboardData(Long userId, User authenticatedUser) {
         MedicalProfileDTO medicalProfile = medicalProfileService.getMedicalProfile(userId)
@@ -36,8 +49,8 @@ public class DashboardService {
         }
 
         // Calculate Completion
-        int personalInfoScore = (medicalProfile.getDob() != null ? 50 : 0) + (medicalProfile.getGender() != null ? 50 : 0);
-        int medicalInfoScore = (medicalProfile.getBloodGroup() != null ? 33 : 0) + (medicalProfile.getHeight() != null ? 33 : 0) + (medicalProfile.getWeight() != null ? 34 : 0);
+        int personalInfoScore = (medicalProfile.getDob() != null ? 50 : 0) + (medicalProfile.getGender() != null && !medicalProfile.getGender().isEmpty() ? 50 : 0);
+        int medicalInfoScore = (medicalProfile.getBloodGroup() != null && !medicalProfile.getBloodGroup().isEmpty() ? 33 : 0) + (medicalProfile.getHeight() != null && !medicalProfile.getHeight().isEmpty() ? 33 : 0) + (medicalProfile.getWeight() != null && !medicalProfile.getWeight().isEmpty() ? 34 : 0);
         int emergencyNotesScore = (medicalProfile.getEmergencyNotes() != null && !medicalProfile.getEmergencyNotes().isEmpty()) ? 100 : 0;
         int insuranceScore = (medicalProfile.getInsuranceProvider() != null && !medicalProfile.getInsuranceProvider().isEmpty()) ? 100 : 0;
         int doctorScore = (medicalProfile.getPrimaryDoctor() != null && !medicalProfile.getPrimaryDoctor().isEmpty()) ? 100 : 0;
@@ -51,49 +64,88 @@ public class DashboardService {
 
         int totalCompletion = (personalInfoScore + medicalInfoScore + emergencyNotesScore + insuranceScore + doctorScore) / 5;
 
-        // Mock stats and charts
+        List<QrScan> allScans = qrScanRepository.findByUserIdOrderByTimestampDesc(userId);
+        List<EmergencyHistory> allEmergencies = emergencyHistoryRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        // Stats calculation
+        LocalDate now = LocalDate.now();
+        int scansThisMonth = 0;
+        for (QrScan s : allScans) {
+            if (s.getTimestamp().getMonth() == now.getMonth() && s.getTimestamp().getYear() == now.getYear()) {
+                scansThisMonth++;
+            }
+        }
+
+        int alertsThisMonth = 0;
+        for (EmergencyHistory e : allEmergencies) {
+            if (e.getCreatedAt() != null && e.getCreatedAt().getMonth() == now.getMonth() && e.getCreatedAt().getYear() == now.getYear()) {
+                alertsThisMonth++;
+            } else if (e.getCreatedAt() == null) { // fallback
+                alertsThisMonth++;
+            }
+        }
+
         DashboardResponseDTO.StatsDTO stats = DashboardResponseDTO.StatsDTO.builder()
-                .qrScans(new DashboardResponseDTO.StatDetail(32, "+12% this month", "up"))
-                .emergencyAlerts(new DashboardResponseDTO.StatDetail(1, "Last: 5 days ago", "neutral"))
+                .qrScans(new DashboardResponseDTO.StatDetail(allScans.size(), scansThisMonth + " this month", scansThisMonth > 0 ? "up" : "neutral"))
+                .emergencyAlerts(new DashboardResponseDTO.StatDetail(allEmergencies.size(), alertsThisMonth + " this month", alertsThisMonth > 0 ? "up" : "neutral"))
                 .savedContacts(new DashboardResponseDTO.StatDetail(contacts.size(), contacts.size() + " total", "neutral"))
-                .familyMembers(new DashboardResponseDTO.StatDetail(familyMembersCount, "All active", "up"))
+                .familyMembers(new DashboardResponseDTO.StatDetail(familyMembersCount, familyMembersCount + " total", "neutral"))
                 .build();
 
         DashboardResponseDTO.QrCodeStatusDTO qrCodeStatus = DashboardResponseDTO.QrCodeStatusDTO.builder()
                 .active(true)
-                .lastGenerated("3 days ago")
-                .totalScans(32)
+                .lastGenerated(allScans.isEmpty() ? "Never" : "Active")
+                .totalScans(allScans.size())
                 .build();
 
-        List<DashboardResponseDTO.ChartDataPointDTO> qrScanData = List.of(
-                new DashboardResponseDTO.ChartDataPointDTO("Jan", 12, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Feb", 19, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Mar", 15, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Apr", 28, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("May", 24, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Jun", 32, 0)
-        );
+        // Chart Data (Last 6 months)
+        Map<String, DashboardResponseDTO.ChartDataPointDTO> chartMap = new LinkedHashMap<>();
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM");
+        for (int i = 5; i >= 0; i--) {
+            String m = now.minusMonths(i).format(monthFormatter);
+            chartMap.put(m, new DashboardResponseDTO.ChartDataPointDTO(m, 0, 0));
+        }
 
-        List<DashboardResponseDTO.ChartDataPointDTO> emergencyData = List.of(
-                new DashboardResponseDTO.ChartDataPointDTO("Jan", 0, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Feb", 0, 1),
-                new DashboardResponseDTO.ChartDataPointDTO("Mar", 0, 0),
-                new DashboardResponseDTO.ChartDataPointDTO("Apr", 0, 2),
-                new DashboardResponseDTO.ChartDataPointDTO("May", 0, 1),
-                new DashboardResponseDTO.ChartDataPointDTO("Jun", 0, 0)
-        );
+        for (QrScan s : allScans) {
+            if (s.getTimestamp().isAfter(now.minusMonths(6).atStartOfDay())) {
+                String m = s.getTimestamp().format(monthFormatter);
+                if (chartMap.containsKey(m)) {
+                    chartMap.get(m).setScans(chartMap.get(m).getScans() + 1);
+                }
+            }
+        }
 
-        List<DashboardResponseDTO.RecentScanDTO> recentScans = List.of(
-                new DashboardResponseDTO.RecentScanDTO(1L, "City General Hospital", "2 hours ago", "Medical scan"),
-                new DashboardResponseDTO.RecentScanDTO(2L, "Airport Security", "Yesterday", "Profile view"),
-                new DashboardResponseDTO.RecentScanDTO(3L, "Metro Station Kiosk", "3 days ago", "QR scan")
-        );
+        for (EmergencyHistory e : allEmergencies) {
+            if (e.getCreatedAt() != null && e.getCreatedAt().isAfter(now.minusMonths(6).atStartOfDay())) {
+                String m = e.getCreatedAt().format(monthFormatter);
+                if (chartMap.containsKey(m)) {
+                    chartMap.get(m).setAlerts(chartMap.get(m).getAlerts() + 1);
+                }
+            }
+        }
 
-        List<DashboardResponseDTO.RecentActivityDTO> recentActivity = List.of(
-                new DashboardResponseDTO.RecentActivityDTO(1L, "Circle notified", "David Jenkins alerted", "5 days ago", "BellRing"),
-                new DashboardResponseDTO.RecentActivityDTO(2L, "Profile updated", "Added penicillin allergy", "1 week ago", "HeartPulse"),
-                new DashboardResponseDTO.RecentActivityDTO(3L, "New contact added", "Dr. Emily Chen", "2 weeks ago", "UserPlus")
-        );
+        List<DashboardResponseDTO.ChartDataPointDTO> qrScanData = new ArrayList<>(chartMap.values());
+        List<DashboardResponseDTO.ChartDataPointDTO> emergencyData = new ArrayList<>(chartMap.values());
+
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+        List<DashboardResponseDTO.RecentScanDTO> recentScans = allScans.stream().limit(5).map(s -> 
+            DashboardResponseDTO.RecentScanDTO.builder()
+                .id(s.getId())
+                .location(s.getLocation())
+                .time(s.getTimestamp().format(timeFormatter))
+                .type(s.getDeviceType())
+                .build()
+        ).collect(Collectors.toList());
+
+        List<DashboardResponseDTO.RecentActivityDTO> recentActivity = allEmergencies.stream().limit(5).map(e -> 
+            DashboardResponseDTO.RecentActivityDTO.builder()
+                .id(e.getId())
+                .title(e.getType())
+                .desc(e.getStatus())
+                .time(e.getDate() + " " + e.getTime())
+                .icon("alert")
+                .build()
+        ).collect(Collectors.toList());
 
         return DashboardResponseDTO.builder()
                 .userId(authenticatedUser != null ? authenticatedUser.getId() : userId)

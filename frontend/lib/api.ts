@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "/api";
+const DEFAULT_BASE_URL = "http://localhost:8080";
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_BASE_URL;
 const AUTH_TOKEN_STORAGE_KEY = "safecircle_auth_token";
@@ -33,7 +33,33 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const detail = await response.text().catch(() => "");
 
   if (!response.ok) {
-    throw new Error(detail || `Request failed with status ${response.status}`);
+    let errorMessage = `Request failed with status ${response.status}`;
+    
+    // Provide a friendly default for auth errors
+    if (response.status === 401 || response.status === 403) {
+      errorMessage = "Invalid credentials or unauthorized request. Please try again.";
+    }
+    
+    // Try to parse a more specific message from the server response
+    if (detail) {
+      try {
+        const parsed = JSON.parse(detail);
+        if (parsed.message) {
+          errorMessage = parsed.message;
+        } else if (parsed.error && typeof parsed.error === 'string') {
+          // Sometimes spring returns "error": "Forbidden", we can use that if there's no message
+          if (parsed.error !== "Forbidden" && parsed.error !== "Unauthorized") {
+             errorMessage = parsed.error;
+          }
+        }
+      } catch {
+        // If it's not JSON, but has text, and it's not a giant HTML page
+        if (detail.length < 100) {
+          errorMessage = detail;
+        }
+      }
+    }
+    throw new Error(errorMessage);
   }
 
   if (response.status === 204 || !detail) {
@@ -110,9 +136,12 @@ export interface MedicalProfilePayload {
 }
 
 export interface SettingsProfile {
-  notificationsEnabled: boolean;
-  locationSharingEnabled: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  twoFactor: boolean;
+  language: string;
   darkMode: boolean;
+  locationSharingEnabled: boolean;
   emergencyAutoShare: boolean;
 }
 
@@ -121,6 +150,8 @@ export interface LocationShareState {
   sharingWith: string[];
   lastUpdated: string;
   currentLocation: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface QrCardState {
@@ -179,10 +210,6 @@ export async function register(payload: SignupRequestPayload) {
     body: JSON.stringify(payload),
   });
 
-  if (response?.token) {
-    setAuthToken(response.token);
-  }
-
   return response;
 }
 
@@ -214,16 +241,33 @@ export async function createFamilyMember(payload: { email: string; relationship:
   });
 }
 
+export async function updateFamilyMember(id: number, payload: { relationship: string; accessStatus: string }) {
+  return request<FamilyMember>(`/family-members/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getFamilyMemberMedicalProfile(id: number) {
+  return request<any>(`/family-members/${id}/medical-profile`);
+}
+
+export async function deleteFamilyMember(id: number) {
+  return request<{ success: boolean }>(`/family-members/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getEmergencyHistory() {
   return request<EmergencyHistoryEvent[]>('/history');
 }
 
 export async function getNotifications() {
-  return request<NotificationItem[]>('/notifications');
+  return request<NotificationDTO[]>('/notifications');
 }
 
 export async function markNotificationsAsRead() {
-  return request<NotificationItem[]>('/notifications', {
+  return request<NotificationDTO[]>('/notifications', {
     method: 'PATCH',
     body: JSON.stringify({ action: 'mark-all-read' }),
   });
@@ -276,8 +320,8 @@ export async function getLocationSharing() {
   return request<LocationShareState>('/location');
 }
 
-export async function getLocationByUserId(userId: string) {
-  return request<LocationShareState>(`/location/${encodeURIComponent(userId)}`);
+export async function getLocationByAlertId(alertId: string) {
+  return request<LocationShareState>(`/location/${encodeURIComponent(alertId)}`);
 }
 
 export async function saveLocationSharing(payload: LocationShareState) {
@@ -340,6 +384,31 @@ export interface PublicScanData {
   contacts: any[];
 }
 
+export interface MedicalProfileData {
+  bloodGroup: string;
+  medicalConditions: string;
+  currentMedications: string;
+  allergies: string;
+  emergencyNotes: string;
+  primaryDoctor: string;
+  hospitalPreference: string;
+}
+
+export interface NotificationDTO {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  time: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  label: string;
+  time: string;
+}
+
 export async function getPublicScanData(id: string) {
   const url = `${API_BASE_URL}/public/scan/${id}`;
   const response = await fetch(url, {
@@ -368,4 +437,40 @@ export async function notifyEmergency(id: string, location?: string) {
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}`);
   }
+
+  const data = await response.json();
+  return data as { alertId: number };
+}
+
+
+
+export async function getTimeline(alertId: string) {
+  return request<TimelineEvent[]>(`/timeline/${encodeURIComponent(alertId)}`);
+}
+
+export async function forgotPassword(email: string) {
+  return request<{ message: string }>('/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  return request<{ message: string }>('/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+export interface SharedLocation {
+  id: number;
+  userId: number;
+  fullName: string;
+  latitude: number;
+  longitude: number;
+  updatedAt: string;
+}
+
+export async function getSharedLocations() {
+  return request<SharedLocation[]>('/location/shared-with-me');
 }

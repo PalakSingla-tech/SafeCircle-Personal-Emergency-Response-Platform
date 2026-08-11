@@ -42,6 +42,9 @@ public class User implements UserDetails {
     @NotNull(message = "Password is required")
     private String password;
 
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

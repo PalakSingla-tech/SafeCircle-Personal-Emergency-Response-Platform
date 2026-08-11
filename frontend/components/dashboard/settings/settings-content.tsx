@@ -29,31 +29,17 @@ import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { useDashboardTheme } from "@/components/dashboard/theme-provider";
 import { getSettings, saveSettings as saveSettingsApi, type SettingsProfile } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { toast } from "react-toastify";
 
-const SETTINGS_KEY = "safecircle_settings";
-
-interface SettingsState {
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  twoFactor: boolean;
-  language: string;
-}
-
-const defaultSettings: SettingsState = {
+const defaultSettings: SettingsProfile = {
   emailNotifications: true,
   smsNotifications: false,
   twoFactor: false,
   language: "en",
+  darkMode: false,
+  locationSharingEnabled: true,
+  emergencyAutoShare: true,
 };
-
-function mapSettingsProfile(profile: SettingsProfile): SettingsState {
-  return {
-    emailNotifications: profile.notificationsEnabled,
-    smsNotifications: false,
-    twoFactor: false,
-    language: "en",
-  };
-}
 
 const languages = [
   { value: "en", label: "English (US)" },
@@ -72,21 +58,6 @@ const sections = [
   { id: "language", label: "Language", icon: Globe },
   { id: "danger", label: "Danger Zone", icon: AlertTriangle },
 ];
-
-function loadSettings(): SettingsState {
-  if (typeof window === "undefined") return defaultSettings;
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { ...defaultSettings, ...JSON.parse(raw) };
-  } catch {
-    /* ignore */
-  }
-  return defaultSettings;
-}
-
-function saveSettings(settings: SettingsState) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-}
 
 function SettingRow({
   icon: Icon,
@@ -128,38 +99,32 @@ function SettingRow({
 
 export function SettingsContent() {
   const { theme, setTheme } = useDashboardTheme();
-  const [settings, setSettings] = useState<SettingsState>(defaultSettings);
+  const [settings, setSettings] = useState<SettingsProfile>(defaultSettings);
   const [activeSection, setActiveSection] = useState("profile");
-  const [saved, setSaved] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const profile = await getSettings();
-        setSettings(mapSettingsProfile(profile));
+        setSettings(profile);
       } catch {
-        setSettings(loadSettings());
+        toast.error("Failed to load settings.");
       }
     };
 
     load();
   }, []);
 
-  const update = async (patch: Partial<SettingsState>) => {
+  const update = async (patch: Partial<SettingsProfile>) => {
     const next = { ...settings, ...patch };
     setSettings(next);
-    saveSettings(next);
 
     try {
-      await saveSettingsApi({
-        notificationsEnabled: next.emailNotifications,
-        locationSharingEnabled: true,
-        darkMode: theme === "dark",
-        emergencyAutoShare: true,
-      });
+      await saveSettingsApi(next);
+      toast.success("Settings saved successfully!");
     } catch {
-      // API fallback is intentionally ignored here; local persistence still works.
+      toast.error("Failed to save settings to server.");
     }
   };
 

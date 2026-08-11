@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import { Reorder, AnimatePresence } from "framer-motion";
 import {
   Phone,
@@ -41,6 +42,7 @@ export function EmergencyContactsClient() {
   const [contacts, setContacts] = useState<EmergencyContact[]>(initialContacts);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<EmergencyContact | null>(null);
 
   
   // Add Contact Form State
@@ -73,9 +75,35 @@ export function EmergencyContactsClient() {
     };
   }, []);
 
+  const shareContact = (contact: EmergencyContact) => {
+    const text = `Emergency Contact:\nName: ${contact.name}\nRelationship: ${contact.relationship}\nPhone: ${contact.phone}`;
+    navigator.clipboard.writeText(text)
+      .then(() => toast.success("Contact info copied to clipboard"))
+      .catch(() => toast.error("Failed to copy contact info"));
+  };
+
+  const startEditContact = (contact: EmergencyContact) => {
+    setEditingContact(contact);
+    setNewName(contact.name);
+    setNewRel(contact.relationship);
+    setNewPhone(contact.phone);
+    setIsAddOpen(true);
+  };
+
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newPhone) return;
+
+    if (editingContact) {
+      // Handle Edit (Mocked for now since backend endpoint might be missing)
+      setContacts((prev) => prev.map(c => 
+        c.id === editingContact.id 
+          ? { ...c, name: newName, relationship: newRel || "Friend", phone: newPhone } 
+          : c
+      ));
+      closeModal();
+      return;
+    }
 
     try {
       const created = await createEmergencyContact({
@@ -84,10 +112,7 @@ export function EmergencyContactsClient() {
         phone: newPhone,
       });
       setContacts((prev) => [created, ...prev]);
-      setIsAddOpen(false);
-      setNewName("");
-      setNewRel("");
-      setNewPhone("");
+      closeModal();
     } catch {
       const initials = newName.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase() || "NA";
       const newContact: EmergencyContact = {
@@ -99,11 +124,16 @@ export function EmergencyContactsClient() {
         avatarInitials: initials,
       };
       setContacts((prev) => [newContact, ...prev]);
-      setIsAddOpen(false);
-      setNewName("");
-      setNewRel("");
-      setNewPhone("");
+      closeModal();
     }
+  };
+
+  const closeModal = () => {
+    setIsAddOpen(false);
+    setEditingContact(null);
+    setNewName("");
+    setNewRel("");
+    setNewPhone("");
   };
 
   const deleteContact = async (id: string) => {
@@ -158,7 +188,7 @@ export function EmergencyContactsClient() {
           </Button>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
           {/* Desktop Table Header */}
           <div className="hidden grid-cols-[auto_1fr_1fr_1fr_auto_auto] items-center gap-4 border-b border-border bg-muted/40 px-6 py-3 text-sm font-medium text-muted-foreground lg:grid">
             <div className="w-8"></div>
@@ -171,7 +201,9 @@ export function EmergencyContactsClient() {
           
           <Reorder.Group axis="y" values={contacts} onReorder={setContacts} className="divide-y divide-border/50">
             <AnimatePresence initial={false}>
-              {contacts.map((contact, index) => (
+              {contacts.map((contact, index) => {
+                if (!contact) return null;
+                return (
                 <Reorder.Item
                   key={contact.id}
                   value={contact}
@@ -194,7 +226,7 @@ export function EmergencyContactsClient() {
                         <GripVertical className="h-4 w-4" />
                         Priority {index + 1}
                       </div>
-                      <ContactActions contact={contact} onDelete={() => deleteContact(contact.id)} />
+                      <ContactActions contact={contact} onShare={() => shareContact(contact)} onEdit={() => startEditContact(contact)} onDelete={() => deleteContact(contact.id)} />
                     </div>
 
                     {/* Avatar & Name */}
@@ -239,21 +271,25 @@ export function EmergencyContactsClient() {
 
                     {/* Actions (Desktop) */}
                     <div className="hidden lg:block">
-                      <ContactActions contact={contact} onDelete={() => deleteContact(contact.id)} />
+                      <ContactActions contact={contact} onShare={() => shareContact(contact)} onEdit={() => startEditContact(contact)} onDelete={() => deleteContact(contact.id)} />
                     </div>
                   </div>
                 </Reorder.Item>
-              ))}
+              )})}
             </AnimatePresence>
           </Reorder.Group>
         </div>
       )}
 
-      {/* Add Contact Modal */}
-      <Dialog open={isAddOpen} onClose={() => setIsAddOpen(false)}>
-        <h3 className="mb-1 text-xl font-bold tracking-tight">Add Emergency Contact</h3>
+      {/* Add/Edit Contact Modal */}
+      <Dialog open={isAddOpen} onClose={closeModal}>
+        <h3 className="mb-1 text-xl font-bold tracking-tight">
+          {editingContact ? "Edit Emergency Contact" : "Add Emergency Contact"}
+        </h3>
         <p className="mb-6 text-sm text-muted-foreground">
-          This person will be notified automatically in an emergency.
+          {editingContact 
+            ? "Update the details for this emergency contact." 
+            : "This person will be notified automatically in an emergency."}
         </p>
         
         <form onSubmit={handleAddContact} className="space-y-4">
@@ -274,11 +310,11 @@ export function EmergencyContactsClient() {
           </div>
           
           <div className="mt-6 flex justify-end gap-2 pt-2 border-t border-border/50">
-            <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={closeModal} className="rounded-xl">
               Cancel
             </Button>
             <Button type="submit" className="rounded-xl">
-              Add Contact
+              {editingContact ? "Save Changes" : "Add Contact"}
             </Button>
           </div>
         </form>
@@ -287,7 +323,7 @@ export function EmergencyContactsClient() {
   );
 }
 
-function ContactActions({ contact, onDelete }: { contact: EmergencyContact, onDelete: () => void }) {
+function ContactActions({ contact, onShare, onEdit, onDelete }: { contact: EmergencyContact, onShare: () => void, onEdit: () => void, onDelete: () => void }) {
   return (
     <DropdownMenu
       trigger={
@@ -296,13 +332,10 @@ function ContactActions({ contact, onDelete }: { contact: EmergencyContact, onDe
         </Button>
       }
     >
-      <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg">
-        <PhoneCall className="h-4 w-4" /> Call
-      </DropdownMenuItem>
-      <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg">
+      <DropdownMenuItem onClick={onShare} className="gap-2 cursor-pointer rounded-lg">
         <Share2 className="h-4 w-4" /> Share Profile
       </DropdownMenuItem>
-      <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg">
+      <DropdownMenuItem onClick={onEdit} className="gap-2 cursor-pointer rounded-lg">
         <Pencil className="h-4 w-4" /> Edit
       </DropdownMenuItem>
       <div className="h-px bg-border my-1" />

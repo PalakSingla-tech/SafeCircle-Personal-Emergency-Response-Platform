@@ -43,11 +43,12 @@ class MedicalProfileServiceTest {
         MedicalProfile profile = new MedicalProfile();
 
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
-        when(medicalProfileMapper.toEntity(dto)).thenReturn(profile);
+        when(medicalProfileRepository.findByUser(user)).thenReturn(Optional.of(profile));
+        when(medicalProfileMapper.toEntity(dto)).thenReturn(new MedicalProfile());
 
         String response = medicalProfileService.createMedicalProfile(42L, dto);
 
-        assertEquals("Medical Profile created successfully", response);
+        assertEquals("Medical Profile saved successfully", response);
         assertSame(user, profile.getUser());
         verify(medicalProfileRepository).save(profile);
     }

@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "react-toastify";
+import { setAuthToken } from "@/lib/api";
 import {
   UserPlus,
   Mail,
@@ -30,6 +32,12 @@ export default function RegisterPage() {
   const [confirm, setConfirm] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Clear any existing auth state when arriving at signup
+    setAuthToken(null);
+    sessionStorage.removeItem("safecircle_auth_token");
+  }, []);
 
   const strength = getPasswordStrength(password);
 
@@ -65,7 +73,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register({ name, email, phone, password });
-      router.push("/dashboard");
+      toast.success("Signup Successful. Please login to continue.");
+      router.push("/login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed.");
     } finally {

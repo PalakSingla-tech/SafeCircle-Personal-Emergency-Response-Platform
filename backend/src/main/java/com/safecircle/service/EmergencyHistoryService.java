@@ -36,7 +36,7 @@ public class EmergencyHistoryService {
                 .build()).collect(Collectors.toList());
     }
 
-    public void createEmergencyEvent(Long userId, String location) {
+    public Long createEmergencyEvent(Long userId, String location) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -51,6 +51,7 @@ public class EmergencyHistoryService {
                 .status("Active")
                 .build();
 
-        repository.save(event);
+        event = repository.save(event);
+        return event.getId();
     }
 }

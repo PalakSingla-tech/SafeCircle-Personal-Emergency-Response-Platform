@@ -1,6 +1,8 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import './globals.css'
 
 const inter = Inter({
@@ -56,6 +58,7 @@ export default function RootLayout({
     <html lang="en" className={`bg-background ${inter.variable} ${jakarta.variable}`}>
       <body className="font-sans antialiased">
         {children}
+        <ToastContainer position="top-right" autoClose={3000} />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

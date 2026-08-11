@@ -51,4 +51,11 @@ public class FamilyMemberController {
         familyMemberService.removeFamilyMember(user.getId(), id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/{id}/medical-profile")
+    public ResponseEntity<com.safecircle.dto.MedicalProfileDTO> getFamilyMemberMedicalProfile(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        java.util.Optional<com.safecircle.dto.MedicalProfileDTO> profile = familyMemberService.getFamilyMemberMedicalProfile(user.getId(), id);
+        return profile.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
+    }
 }

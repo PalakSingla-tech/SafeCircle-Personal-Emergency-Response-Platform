@@ -22,7 +22,12 @@ export function DropdownMenu({ trigger, children, align = "end" }: DropdownMenuP
 
   return (
     <div className="relative" ref={ref}>
-      <div onClick={() => setOpen((v) => !v)}>{trigger}</div>
+      <div 
+        onClick={() => setOpen((v) => !v)}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {trigger}
+      </div>
       {open && (
         <div
           className={cn(

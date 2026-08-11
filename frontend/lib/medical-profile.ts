@@ -35,7 +35,7 @@ export const emptyProfile: MedicalProfileData = {
   allergies: "",
   pastSurgeries: "",
   disabilities: "",
-  organDonor: "no",
+  organDonor: "",
   emergencyNotes: "",
   insuranceProvider: "",
   policyNumber: "",
@@ -51,9 +51,12 @@ import { getMedicalProfile, saveMedicalProfile as apiSaveMedicalProfile, saveMed
 export async function loadProfile(): Promise<MedicalProfileData> {
   try {
     const data = await getMedicalProfile();
-    if (data && Object.keys(data).length > 0) {
+    if (data) {
       return { ...emptyProfile, ...data };
     }
+    // If data is null, the user has no profile on the server.
+    // We should NOT fallback to localStorage here, because that might be another user's profile.
+    return emptyProfile;
   } catch (error) {
     console.error("Failed to load medical profile from API:", error);
   }

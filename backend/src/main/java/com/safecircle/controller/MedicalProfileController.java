@@ -30,9 +30,18 @@ public class MedicalProfileController {
         return ResponseEntity.ok(medicalProfileService.createMedicalProfile(id, medicalProfileDTO));
     }
 
+    @PostMapping({"/dashboard/medical-profile/draft", "/api/dashboard/medical-profile/draft"})
+    public ResponseEntity<String> medicalProfileDraft(
+            @AuthenticationPrincipal User user,
+            @RequestBody MedicalProfileDTO medicalProfileDTO)
+    {
+        Long id = user.getId();
+        return ResponseEntity.ok(medicalProfileService.createMedicalProfile(id, medicalProfileDTO));
+    }
+
     @GetMapping({"/dashboard/medical-profile", "/api/dashboard/medical-profile"})
     public ResponseEntity<MedicalProfileDTO> getMedicalProfile(@AuthenticationPrincipal User user) {
         Optional<MedicalProfileDTO> profile = medicalProfileService.getMedicalProfile(user.getId());
-        return profile.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        return profile.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

@@ -2,6 +2,7 @@ package com.safecircle.service;
 
 import com.safecircle.dto.FamilyMemberRequestDTO;
 import com.safecircle.dto.FamilyMemberResponseDTO;
+import com.safecircle.dto.MedicalProfileDTO;
 import com.safecircle.entity.FamilyMember;
 import com.safecircle.entity.User;
 import com.safecircle.mapper.FamilyMemberMapper;
@@ -22,6 +23,8 @@ public class FamilyMemberService {
     private final FamilyMemberRepository familyMemberRepository;
     private final UserRepository userRepository;
     private final FamilyMemberMapper familyMemberMapper;
+    private final MedicalProfileService medicalProfileService;
+    private final NotificationService notificationService;
 
     @Transactional
     public FamilyMemberResponseDTO addFamilyMember(Long userId, FamilyMemberRequestDTO request) {
@@ -48,6 +51,14 @@ public class FamilyMemberService {
                 .build();
 
         FamilyMember saved = familyMemberRepository.save(familyMember);
+
+        notificationService.createNotification(
+                memberUser.getId(),
+                "Added to Safety Circle",
+                user.getFullName() + " has added you to their safety circle as " + request.getRelationship() + ".",
+                "family_invite"
+        );
+
         return familyMemberMapper.mapToDTO(saved);
     }
 
@@ -88,5 +99,16 @@ public class FamilyMemberService {
         }
 
         familyMemberRepository.delete(familyMember);
+    }
+
+    public Optional<MedicalProfileDTO> getFamilyMemberMedicalProfile(Long userId, Long familyMemberId) {
+        FamilyMember familyMember = familyMemberRepository.findById(familyMemberId)
+                .orElseThrow(() -> new RuntimeException("Family member not found"));
+
+        if (!familyMember.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        return medicalProfileService.getMedicalProfile(familyMember.getMemberUser().getId());
     }
 }

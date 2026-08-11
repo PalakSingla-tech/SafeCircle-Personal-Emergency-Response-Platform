@@ -10,6 +10,7 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { AuthCheckbox } from "@/components/auth/auth-checkbox";
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { login } from "@/lib/api";
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,21 +28,22 @@ export default function LoginPage() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setError("Please enter your email.");
+      toast.error("Please enter your email.");
       return;
     }
     if (!password) {
-      setError("Please enter your password.");
+      toast.error("Please enter your password.");
       return;
     }
 
     setLoading(true);
     try {
       await login({ email: trimmedEmail, password });
+      toast.success("Successfully logged in!");
       router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed.");
-    } finally {
+      const errorMsg = err instanceof Error ? err.message : "Login failed.";
+      toast.error(errorMsg);
       setLoading(false);
     }
   };
@@ -92,8 +94,6 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          {error && <AuthError message={error} />}
-
           <AuthSubmitButton className="mt-2" disabled={loading}>
             {loading ? <Loader2 className="animate-spin" size={18} /> : <LogIn size={18} />}
             Sign in
@@ -106,7 +106,6 @@ export default function LoginPage() {
             onClick={() => {
               setGoogleLoading(true);
               setTimeout(() => {
-                setGoogleLoading(false);
                 router.push("/dashboard");
               }, 600);
             }}

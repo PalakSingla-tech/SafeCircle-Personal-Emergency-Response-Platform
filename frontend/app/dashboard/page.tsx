@@ -26,6 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -163,8 +164,8 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <DashboardCard title="QR Code Status" description="Your emergency card is live">
           <div className="flex flex-col items-center gap-4 py-2">
-            <div className="flex h-28 w-28 items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5">
-              <QrCode className="h-16 w-16 text-primary" />
+            <div className="flex h-28 w-28 items-center justify-center rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-2 bg-white overflow-hidden">
+              <QRCode value={`${typeof window !== 'undefined' ? window.location.origin : ''}/scan/${data.userId}`} size={100} style={{ height: "auto", maxWidth: "100%", width: "100%" }} viewBox={`0 0 100 100`} />
             </div>
             {data.qrCodeStatus.active ? (
               <Badge variant="success" className="gap-1">

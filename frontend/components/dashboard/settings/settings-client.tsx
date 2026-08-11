@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   User, 
   ShieldCheck, 
@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useDashboardTheme } from "@/components/dashboard/theme-provider";
+import { getDashboard } from "@/lib/api";
 
 export function SettingsClient() {
   const { theme, toggleTheme } = useDashboardTheme();
@@ -30,6 +31,15 @@ export function SettingsClient() {
   const [smsNotif, setSmsNotif] = useState(false);
   const [profileVisibility, setProfileVisibility] = useState("Private");
   const [language, setLanguage] = useState("English (US)");
+  const [profile, setProfile] = useState<{fullName: string, email: string} | null>(null);
+
+  useEffect(() => {
+    getDashboard().then(data => {
+      if (data) {
+        setProfile({ fullName: data.fullName, email: data.email });
+      }
+    }).catch(err => console.error(err));
+  }, []);
 
   const ToggleSwitch = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
     <button 
@@ -87,7 +97,7 @@ export function SettingsClient() {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
               <div className="flex items-center gap-6">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary ring-4 ring-background shadow-sm">
-                  SJ
+                  {profile?.fullName ? profile.fullName.substring(0,2).toUpperCase() : "SJ"}
                 </div>
                 <div>
                   <Button variant="outline" className="rounded-xl mr-2">Change Avatar</Button>
@@ -97,11 +107,11 @@ export function SettingsClient() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Full Name</label>
-                  <Input defaultValue="Sarah Jenkins" className="rounded-xl bg-muted/30 border-border/50" />
+                  <Input value={profile?.fullName || ""} onChange={e => setProfile({...profile!, fullName: e.target.value})} className="rounded-xl bg-muted/30 border-border/50" />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Email Address</label>
-                  <Input defaultValue="sarah.jenkins@example.com" type="email" className="rounded-xl bg-muted/30 border-border/50" />
+                  <Input value={profile?.email || ""} onChange={e => setProfile({...profile!, email: e.target.value})} type="email" className="rounded-xl bg-muted/30 border-border/50" />
                 </div>
               </div>
               <Button className="rounded-xl">Save Changes</Button>

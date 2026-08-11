@@ -26,12 +26,17 @@ public class LocationSharingController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{userId}")
+    @GetMapping("/{alertId}")
     public ResponseEntity<LocationResponseDTO> getLocation(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long userId) {
-        // Here we could add permission checks to ensure `user` has right to access `userId` location
-        LocationResponseDTO response = locationSharingService.getLocation(userId);
+            @PathVariable Long alertId) {
+        LocationResponseDTO response = locationSharingService.getLocation(alertId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/shared-with-me")
+    public ResponseEntity<java.util.List<LocationResponseDTO>> getSharedLocations(
+            @AuthenticationPrincipal User user) {
+        java.util.List<LocationResponseDTO> locations = locationSharingService.getSharedLocations(user.getId());
+        return ResponseEntity.ok(locations);
     }
 }

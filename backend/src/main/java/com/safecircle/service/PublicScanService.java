@@ -8,9 +8,13 @@ import com.safecircle.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+
+import com.safecircle.entity.QrScan;
+import com.safecircle.repository.QrScanRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -20,10 +24,23 @@ public class PublicScanService {
     private final MedicalProfileService medicalProfileService;
     private final EmergencyContactsService emergencyContactsService;
     private final EmergencyHistoryService emergencyHistoryService;
+    private final SmsService smsService;
+    private final NotificationService notificationService;
+    private final EmergencyTimelineService timelineService;
+    private final QrScanRepository qrScanRepository;
 
     public PublicScanResponseDTO getScanData(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Log the QR Scan
+        QrScan scan = QrScan.builder()
+                .user(user)
+                .timestamp(LocalDateTime.now())
+                .location("Unknown Location") // Can be updated if they share location
+                .deviceType("Mobile Browser")
+                .build();
+        qrScanRepository.save(scan);
 
         Optional<MedicalProfileDTO> profileOpt = medicalProfileService.getMedicalProfile(userId);
 
@@ -38,6 +55,9 @@ public class PublicScanService {
 
         if (profileOpt.isPresent()) {
             MedicalProfileDTO profile = profileOpt.get();
+            if (profile.getDob() != null) {
+                age = java.time.Period.between(profile.getDob(), java.time.LocalDate.now()).getYears();
+            }
             bloodGroup = profile.getBloodGroup() != null ? profile.getBloodGroup() : bloodGroup;
             emergencyNotes = profile.getEmergencyNotes() != null ? profile.getEmergencyNotes() : emergencyNotes;
             doctorInfo = profile.getPrimaryDoctor() != null ? profile.getPrimaryDoctor() : doctorInfo;
@@ -83,8 +103,42 @@ public class PublicScanService {
                 .build();
     }
 
-    public void notifyEmergency(Long userId, String location) {
+    public Long notifyEmergency(Long userId, String location) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         // Create an emergency history record
-        emergencyHistoryService.createEmergencyEvent(userId, location);
+        Long alertId = emergencyHistoryService.createEmergencyEvent(userId, location);
+
+        List<EmergencyContactResponseDTO> contacts = emergencyContactsService.showContacts(userId);
+        if (contacts != null) {
+            String mapsLink = (location != null && !location.isEmpty()) ? 
+                    "https://maps.google.com/?q=" + location.replace(" ", "+") : 
+                    "Location not provided.";
+            
+            String message = "🚨 Emergency Alert\n" +
+                    user.getFullName() + " has triggered an emergency.\n" +
+                    "Current Location:\n" +
+                    mapsLink + "\n" +
+                    "Please contact them immediately.";
+
+            for (EmergencyContactResponseDTO contact : contacts) {
+                if (contact.getPhoneNumber() != null && !contact.getPhoneNumber().isEmpty()) {
+                    smsService.sendSms(contact.getPhoneNumber(), message);
+                }
+            }
+        }
+        
+        notificationService.createNotification(
+                userId, 
+                "Emergency Triggered!", 
+                "Your emergency QR was scanned and an alert was sent to your contacts.", 
+                "alert"
+        );
+        
+        timelineService.logEvent(alertId, "QR Scanned");
+        timelineService.logEvent(alertId, "Emergency Alert Sent");
+        
+        return alertId;
     }
 }

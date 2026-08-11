@@ -19,4 +19,6 @@ public class LocationRequestDTO {
     
     @NotNull(message = "Longitude is required")
     private BigDecimal longitude;
+
+    private Long alertId;
 }
