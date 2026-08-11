@@ -49,8 +49,6 @@ Users can
 - Update contacts
 - Delete contacts
 
-These contacts are intended to receive emergency notifications in future versions.
-
 ---
 
 ## 🏥 Medical Profile
@@ -91,6 +89,18 @@ The dashboard provides centralized access to:
 
 ---
 
+## 📍 Location Sharing (REST API)
+- Real-time GPS coordinate logging and retrieval via secure REST endpoints.
+- Secure sharing of location with trusted family members.
+
+---
+
+## 📱 SMS & Email Alerts
+- Twilio integration for dispatching SMS alerts.
+- JavaMailSender implementation for email verification links.
+
+---
+
 # 🏗️ Project Architecture
 
 ```
@@ -127,6 +137,8 @@ The dashboard provides centralized access to:
 - Maven
 - JWT Authentication
 - REST APIs
+- Twilio(SMS Alerts)
+- JavaMailSender(Email verification links)
 
 ## Frontend
 
