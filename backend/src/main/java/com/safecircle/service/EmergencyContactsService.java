@@ -21,14 +21,14 @@ public class EmergencyContactsService {
     private final EmergencyContactRepository emergencyContactRepository;
     private final EmergencyContactMapper emergencyContactMapper;
 
-    public String addContact(Long id, EmergencyContactRequestDTO emergencyContactRequestDTO) {
+    public EmergencyContactResponseDTO addContact(Long id, EmergencyContactRequestDTO emergencyContactRequestDTO) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         EmergencyContact ec = emergencyContactMapper.toEntity(emergencyContactRequestDTO);
         ec.setUser(user);
-        emergencyContactRepository.save(ec);
-        return "Emergency Contact added successfully";
+        EmergencyContact saved = emergencyContactRepository.save(ec);
+        return emergencyContactMapper.toResponseDTO(saved);
     }
 
     public List<EmergencyContactResponseDTO> showContacts(Long id) {
@@ -39,5 +39,39 @@ public class EmergencyContactsService {
         return contactList.stream()
                 .map(emergencyContactMapper::toResponseDTO)
                 .toList();
+    }
+
+    public EmergencyContactResponseDTO updateContact(Long userId, Long contactId, EmergencyContactRequestDTO dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        EmergencyContact contact = emergencyContactRepository.findById(contactId)
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
+
+        if (!contact.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        contact.setContactName(dto.getContactName());
+        contact.setRelationship(dto.getRelationship());
+        contact.setPhoneNumber(dto.getPhoneNumber());
+        
+        EmergencyContact saved = emergencyContactRepository.save(contact);
+        return emergencyContactMapper.toResponseDTO(saved);
+    }
+
+    public String deleteContact(Long userId, Long contactId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        EmergencyContact contact = emergencyContactRepository.findById(contactId)
+                .orElseThrow(() -> new RuntimeException("Contact not found"));
+
+        if (!contact.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        emergencyContactRepository.delete(contact);
+        return "Contact deleted successfully";
     }
 }

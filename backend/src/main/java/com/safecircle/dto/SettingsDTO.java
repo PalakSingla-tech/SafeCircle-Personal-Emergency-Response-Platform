@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SettingsDTO {
+    private String fullName;
+    private String email;
+    private String phoneNumber;
     private boolean emailNotifications;
     private boolean smsNotifications;
     private boolean twoFactor;

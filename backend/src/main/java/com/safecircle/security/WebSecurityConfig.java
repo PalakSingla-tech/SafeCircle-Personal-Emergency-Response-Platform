@@ -32,18 +32,10 @@ public class WebSecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-                "http://localhost:5173",
-                "https://*.vercel.app"
-        ));
-        
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://127.0.0.1:3000"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -65,7 +57,9 @@ public class WebSecurityConfig {
                             "/auth/register", "/auth/login",
                             "/forgot-password", "/api/forgot-password", "/auth/forgot-password",
                             "/reset-password", "/api/reset-password", "/auth/reset-password",
-                            "/public/**"
+                            "/public/**",
+                            "/location/*",
+                            "/error"
                         )
                         .permitAll()
                         .anyRequest().authenticated()

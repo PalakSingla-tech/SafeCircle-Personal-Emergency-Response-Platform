@@ -26,25 +26,8 @@ public class MedicalProfileService {
         MedicalProfile medicalProfile = medicalProfileRepository.findByUser(user)
                 .orElse(new MedicalProfile());
         
-        MedicalProfile updatedProfile = medicalProfileMapper.toEntity(medicalProfileDTO);
-        
+        medicalProfileMapper.updateEntityFromDto(medicalProfileDTO, medicalProfile);
         medicalProfile.setUser(user);
-        medicalProfile.setDob(updatedProfile.getDob());
-        medicalProfile.setGender(updatedProfile.getGender());
-        medicalProfile.setBloodGroup(updatedProfile.getBloodGroup());
-        medicalProfile.setHeight(updatedProfile.getHeight());
-        medicalProfile.setWeight(updatedProfile.getWeight());
-        medicalProfile.setMedicalConditions(updatedProfile.getMedicalConditions());
-        medicalProfile.setCurrentMedications(updatedProfile.getCurrentMedications());
-        medicalProfile.setAllergies(updatedProfile.getAllergies());
-        medicalProfile.setPastSurgeries(updatedProfile.getPastSurgeries());
-        medicalProfile.setDisabilities(updatedProfile.getDisabilities());
-        medicalProfile.setOrganDonor(updatedProfile.getOrganDonor());
-        medicalProfile.setEmergencyNotes(updatedProfile.getEmergencyNotes());
-        medicalProfile.setInsuranceProvider(updatedProfile.getInsuranceProvider());
-        medicalProfile.setPolicyNumber(updatedProfile.getPolicyNumber());
-        medicalProfile.setPrimaryDoctor(updatedProfile.getPrimaryDoctor());
-        medicalProfile.setHospitalPreference(updatedProfile.getHospitalPreference());
 
         medicalProfileRepository.save(medicalProfile);
         return "Medical Profile saved successfully";

@@ -1,5 +1,6 @@
 package com.safecircle.controller;
 
+import com.safecircle.dto.SettingsDTO;
 import com.safecircle.dto.SettingsPasswordRequestDTO;
 import com.safecircle.dto.SettingsProfileRequestDTO;
 import com.safecircle.entity.User;
@@ -35,14 +36,14 @@ public class SettingsController {
     }
 
     @GetMapping
-    public ResponseEntity<com.safecircle.dto.SettingsDTO> getSettings(@AuthenticationPrincipal User user) {
+    public ResponseEntity<SettingsDTO> getSettings(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(settingsService.getUserSettings(user.getId()));
     }
 
     @PutMapping
-    public ResponseEntity<com.safecircle.dto.SettingsDTO> updateSettings(
+    public ResponseEntity<SettingsDTO> updateSettings(
             @AuthenticationPrincipal User user,
-            @RequestBody com.safecircle.dto.SettingsDTO request) {
+            @RequestBody SettingsDTO request) {
         return ResponseEntity.ok(settingsService.updateUserSettings(user.getId(), request));
     }
 }

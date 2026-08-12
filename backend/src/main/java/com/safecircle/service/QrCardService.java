@@ -70,8 +70,6 @@ public class QrCardService {
     }
     
     public QrCardResponseDTO updateQrCardData(Long userId, QrCardResponseDTO payload) {
-        // In a real app, you might regenerate a unique hash or update the DB status.
-        // For now, simply regenerate the data so it gets the fresh DB state.
         return generateQrCardData(userId);
     }
 }

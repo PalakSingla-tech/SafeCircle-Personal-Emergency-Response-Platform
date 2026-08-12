@@ -18,7 +18,6 @@ public class DashboardResponseDTO {
     private MedicalProfileDTO medicalProfile;
     private List<EmergencyContactResponseDTO> emergencyContacts;
 
-    // New fields for frontend dashboard
     private int completionPercentage;
     
     private StatsDTO stats;

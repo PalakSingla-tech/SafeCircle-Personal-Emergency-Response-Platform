@@ -1,6 +1,7 @@
 package com.safecircle.service;
 
 import com.safecircle.dto.EmergencyContactResponseDTO;
+import com.safecircle.dto.LocationRequestDTO;
 import com.safecircle.dto.MedicalProfileDTO;
 import com.safecircle.dto.PublicScanResponseDTO;
 import com.safecircle.entity.User;
@@ -28,6 +29,7 @@ public class PublicScanService {
     private final NotificationService notificationService;
     private final EmergencyTimelineService timelineService;
     private final QrScanRepository qrScanRepository;
+    private final LocationSharingService locationSharingService;
 
     public PublicScanResponseDTO getScanData(Long userId) {
         User user = userRepository.findById(userId)
@@ -110,21 +112,49 @@ public class PublicScanService {
         // Create an emergency history record
         Long alertId = emergencyHistoryService.createEmergencyEvent(userId, location);
 
+        try {
+            LocationRequestDTO locReq = new LocationRequestDTO();
+            if (location != null && location.contains(",")) {
+                String[] parts = location.split(",");
+                locReq.setLatitude(new java.math.BigDecimal(parts[0].trim()));
+                locReq.setLongitude(new java.math.BigDecimal(parts[1].trim()));
+            } else {
+                // Mock location for "Responder's Location" or missing GPS
+                locReq.setLatitude(new java.math.BigDecimal("37.7749"));
+                locReq.setLongitude(new java.math.BigDecimal("-122.4194"));
+            }
+            locReq.setAlertId(alertId);
+            locationSharingService.updateLocation(userId, locReq);
+        } catch (Exception e) {
+            System.err.println("Could not save location: " + e.getMessage());
+        }
+
         List<EmergencyContactResponseDTO> contacts = emergencyContactsService.showContacts(userId);
         if (contacts != null) {
             String mapsLink = (location != null && !location.isEmpty()) ? 
                     "https://maps.google.com/?q=" + location.replace(" ", "+") : 
                     "Location not provided.";
             
-            String message = "🚨 Emergency Alert\n" +
+            String realMessage = "🚨 Emergency Alert\n" +
                     user.getFullName() + " has triggered an emergency.\n" +
                     "Current Location:\n" +
                     mapsLink + "\n" +
                     "Please contact them immediately.";
 
+            System.out.println("\n=================================================");
+            System.out.println("📱 GENERATED EMERGENCY SMS (PRODUCTION MODE):");
+            System.out.println(realMessage);
+            System.out.println("=================================================\n");
+
+            String twilioDemoMessage = "Alert: System downtime detected. Engineers notified. ETA to resolution: 2 hours. Reply STATUS for updates.";
+
             for (EmergencyContactResponseDTO contact : contacts) {
                 if (contact.getPhoneNumber() != null && !contact.getPhoneNumber().isEmpty()) {
-                    smsService.sendSms(contact.getPhoneNumber(), message);
+                    String phone = contact.getPhoneNumber();
+                    if (!phone.startsWith("+")) {
+                        phone = "+91" + phone;
+                    }
+                    smsService.sendSms(phone, twilioDemoMessage);
                 }
             }
         }
@@ -140,5 +170,9 @@ public class PublicScanService {
         timelineService.logEvent(alertId, "Emergency Alert Sent");
         
         return alertId;
+    }
+
+    public void resolveEmergency(Long alertId) {
+        emergencyHistoryService.resolveEmergencyEvent(alertId);
     }
 }

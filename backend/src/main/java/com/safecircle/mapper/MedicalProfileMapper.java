@@ -28,6 +28,25 @@ public class MedicalProfileMapper {
                 .build();
     }
 
+    public void updateEntityFromDto(MedicalProfileDTO dto, MedicalProfile entity) {
+        entity.setDob(dto.getDob());
+        entity.setGender(dto.getGender());
+        entity.setBloodGroup(dto.getBloodGroup());
+        entity.setHeight(dto.getHeight());
+        entity.setWeight(dto.getWeight());
+        entity.setMedicalConditions(dto.getMedicalConditions());
+        entity.setCurrentMedications(dto.getCurrentMedications());
+        entity.setAllergies(dto.getAllergies());
+        entity.setPastSurgeries(dto.getPastSurgeries());
+        entity.setDisabilities(dto.getDisabilities());
+        entity.setOrganDonor(dto.getOrganDonor());
+        entity.setEmergencyNotes(dto.getEmergencyNotes());
+        entity.setInsuranceProvider(dto.getInsuranceProvider());
+        entity.setPolicyNumber(dto.getPolicyNumber());
+        entity.setPrimaryDoctor(dto.getPrimaryDoctor());
+        entity.setHospitalPreference(dto.getHospitalPreference());
+    }
+
     public MedicalProfileDTO toResponseDTO(MedicalProfile medicalProfile) {
         MedicalProfileDTO dto = new MedicalProfileDTO();
         dto.setDob(medicalProfile.getDob());

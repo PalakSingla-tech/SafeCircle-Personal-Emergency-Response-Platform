@@ -72,6 +72,9 @@ public class SettingsService {
                 });
 
         return SettingsDTO.builder()
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
                 .emailNotifications(settings.isEmailNotifications())
                 .smsNotifications(settings.isSmsNotifications())
                 .twoFactor(settings.isTwoFactor())

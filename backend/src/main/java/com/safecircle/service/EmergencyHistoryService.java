@@ -54,4 +54,23 @@ public class EmergencyHistoryService {
         event = repository.save(event);
         return event.getId();
     }
+
+    public void resolveEmergencyEvent(Long eventId, Long userId) {
+        EmergencyHistory event = repository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+        
+        if (!event.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        event.setStatus("Resolved");
+        repository.save(event);
+    }
+
+    public void resolveEmergencyEvent(Long eventId) {
+        EmergencyHistory event = repository.findById(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found"));
+        event.setStatus("Resolved");
+        repository.save(event);
+    }
 }

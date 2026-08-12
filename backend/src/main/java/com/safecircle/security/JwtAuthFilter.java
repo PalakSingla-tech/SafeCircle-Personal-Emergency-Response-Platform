@@ -37,9 +37,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.getWriter().write("Invalid or Expired JWT Token");
-            return;
+            // Log the exception but do not block the request. 
+            // If the endpoint requires authentication, Spring Security will return 403/401 later.
+            // If it is public (e.g. /login), it will proceed successfully.
+            System.out.println("JWT Token validation failed: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

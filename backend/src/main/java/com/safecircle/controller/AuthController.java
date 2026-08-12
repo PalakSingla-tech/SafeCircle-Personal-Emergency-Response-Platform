@@ -1,16 +1,17 @@
 package com.safecircle.controller;
 
-import com.safecircle.dto.LoginRequestDTO;
-import com.safecircle.dto.LoginResponseDTO;
-import com.safecircle.dto.SignUpRequestDTO;
-import com.safecircle.dto.SignUpResponseDTO;
+import com.safecircle.dto.*;
 import com.safecircle.security.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,14 +33,20 @@ public class AuthController {
     }
 
     @PostMapping({"/forgot-password", "/api/forgot-password", "/auth/forgot-password"})
-    public ResponseEntity<String> forgotPassword(@RequestBody com.safecircle.dto.ForgotPasswordRequestDTO requestDTO) {
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequestDTO requestDTO) {
         authService.forgotPassword(requestDTO);
         return ResponseEntity.ok("{\"message\":\"Password reset link sent\"}");
     }
 
     @PostMapping({"/reset-password", "/api/reset-password", "/auth/reset-password"})
-    public ResponseEntity<String> resetPassword(@RequestBody com.safecircle.dto.ResetPasswordRequestDTO requestDTO) {
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequestDTO requestDTO) {
         authService.resetPassword(requestDTO);
         return ResponseEntity.ok("{\"message\":\"Password updated successfully\"}");
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler({AuthenticationException.class, RuntimeException.class})
+    public ResponseEntity<Map<String, String>> handleAuthExceptions(Exception ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", ex.getMessage()));
     }
 }

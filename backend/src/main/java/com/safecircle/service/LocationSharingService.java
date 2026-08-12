@@ -2,6 +2,7 @@ package com.safecircle.service;
 
 import com.safecircle.dto.LocationRequestDTO;
 import com.safecircle.dto.LocationResponseDTO;
+import com.safecircle.entity.FamilyMember;
 import com.safecircle.entity.Location;
 import com.safecircle.entity.User;
 import com.safecircle.mapper.LocationSharingMapper;
@@ -11,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -43,7 +46,7 @@ public class LocationSharingService {
                         .build();
             }
         } else {
-            Optional<Location> existingLocation = locationRepository.findByUser(user);
+            Optional<Location> existingLocation = locationRepository.findFirstByUserOrderByIdDesc(user);
             if (existingLocation.isPresent()) {
                 location = existingLocation.get();
                 location.setLatitude(request.getLatitude());
@@ -63,22 +66,22 @@ public class LocationSharingService {
 
     public LocationResponseDTO getLocation(Long alertId) {
         Location location = locationRepository.findByAlertId(alertId)
-                .orElseThrow(() -> new RuntimeException("Location not found"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Location not found"));
 
         return locationSharingMapper.mapToDTO(location);
     }
 
-    public java.util.List<LocationResponseDTO> getSharedLocations(Long currentUserId) {
+    public List<LocationResponseDTO> getSharedLocations(Long currentUserId) {
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        java.util.List<com.safecircle.entity.FamilyMember> circlesImIn = familyMemberRepository.findByMemberUser(currentUser);
-        java.util.List<LocationResponseDTO> sharedLocations = new java.util.ArrayList<>();
+        List<FamilyMember> circlesImIn = familyMemberRepository.findByMemberUser(currentUser);
+        List<LocationResponseDTO> sharedLocations = new ArrayList<>();
 
-        for (com.safecircle.entity.FamilyMember fm : circlesImIn) {
+        for (FamilyMember fm : circlesImIn) {
             // Find latest location of fm.getUser()
             User sharingUser = fm.getUser();
-            Optional<Location> latestLocation = locationRepository.findByUser(sharingUser);
+            Optional<Location> latestLocation = locationRepository.findFirstByUserOrderByIdDesc(sharingUser);
             
             if (latestLocation.isPresent()) {
                 Location loc = latestLocation.get();

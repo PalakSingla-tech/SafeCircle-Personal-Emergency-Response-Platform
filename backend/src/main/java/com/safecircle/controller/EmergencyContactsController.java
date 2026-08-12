@@ -19,7 +19,7 @@ public class EmergencyContactsController {
     private final EmergencyContactsService emergencyContactsService;
 
     @PostMapping({"/dashboard/emergency-contacts", "/api/dashboard/emergency-contacts"})
-    public ResponseEntity<String> addContact(
+    public ResponseEntity<EmergencyContactResponseDTO> addContact(
             @AuthenticationPrincipal User user,
             @RequestBody EmergencyContactRequestDTO emergencyContactRequestDTO)
     {
@@ -32,4 +32,20 @@ public class EmergencyContactsController {
         return ResponseEntity.ok(emergencyContactsService.showContacts(user.getId()));
     }
 
+    @PutMapping({"/dashboard/emergency-contacts/{contactId}", "/api/dashboard/emergency-contacts/{contactId}"})
+    public ResponseEntity<EmergencyContactResponseDTO> updateContact(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long contactId,
+            @RequestBody EmergencyContactRequestDTO emergencyContactRequestDTO)
+    {
+        return ResponseEntity.ok(emergencyContactsService.updateContact(user.getId(), contactId, emergencyContactRequestDTO));
+    }
+
+    @DeleteMapping({"/dashboard/emergency-contacts", "/api/dashboard/emergency-contacts"})
+    public ResponseEntity<String> deleteContact(
+            @AuthenticationPrincipal User user,
+            @RequestParam Long id)
+    {
+        return ResponseEntity.ok(emergencyContactsService.deleteContact(user.getId(), id));
+    }
 }

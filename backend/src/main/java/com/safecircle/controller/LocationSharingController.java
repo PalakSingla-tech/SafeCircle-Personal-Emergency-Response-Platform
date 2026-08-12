@@ -10,6 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/location")
 @RequiredArgsConstructor
@@ -19,9 +22,12 @@ public class LocationSharingController {
     private final LocationSharingService locationSharingService;
 
     @PostMapping
-    public ResponseEntity<LocationResponseDTO> updateLocation(
+    public ResponseEntity<?> updateLocation(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody LocationRequestDTO request) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
         LocationResponseDTO response = locationSharingService.updateLocation(user.getId(), request);
         return ResponseEntity.ok(response);
     }
@@ -34,9 +40,12 @@ public class LocationSharingController {
     }
 
     @GetMapping("/shared-with-me")
-    public ResponseEntity<java.util.List<LocationResponseDTO>> getSharedLocations(
+    public ResponseEntity<?> getSharedLocations(
             @AuthenticationPrincipal User user) {
-        java.util.List<LocationResponseDTO> locations = locationSharingService.getSharedLocations(user.getId());
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+        List<LocationResponseDTO> locations = locationSharingService.getSharedLocations(user.getId());
         return ResponseEntity.ok(locations);
     }
 }

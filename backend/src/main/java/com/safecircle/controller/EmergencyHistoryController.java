@@ -23,4 +23,10 @@ public class EmergencyHistoryController {
         List<EmergencyHistoryResponseDTO> history = historyService.getEmergencyHistory(user.getId());
         return ResponseEntity.ok(history);
     }
+
+    @PutMapping("/{id}/resolve")
+    public ResponseEntity<Void> resolveEmergency(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        historyService.resolveEmergencyEvent(id, user.getId());
+        return ResponseEntity.ok().build();
+    }
 }

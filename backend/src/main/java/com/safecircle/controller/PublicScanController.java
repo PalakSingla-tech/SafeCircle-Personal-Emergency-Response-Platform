@@ -36,4 +36,15 @@ public class PublicScanController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
     }
+
+    @PutMapping("/alert/{alertId}/resolve")
+    public ResponseEntity<?> resolvePublicEmergency(@PathVariable Long alertId) {
+        try {
+            publicScanService.resolveEmergency(alertId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

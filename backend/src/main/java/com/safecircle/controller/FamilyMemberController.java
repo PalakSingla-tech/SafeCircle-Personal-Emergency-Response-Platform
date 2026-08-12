@@ -2,6 +2,7 @@ package com.safecircle.controller;
 
 import com.safecircle.dto.FamilyMemberRequestDTO;
 import com.safecircle.dto.FamilyMemberResponseDTO;
+import com.safecircle.dto.MedicalProfileDTO;
 import com.safecircle.entity.User;
 import com.safecircle.service.FamilyMemberService;
 import jakarta.validation.Valid;
@@ -52,10 +53,10 @@ public class FamilyMemberController {
         return ResponseEntity.noContent().build();
     }
     @GetMapping("/{id}/medical-profile")
-    public ResponseEntity<com.safecircle.dto.MedicalProfileDTO> getFamilyMemberMedicalProfile(
+    public ResponseEntity<MedicalProfileDTO> getFamilyMemberMedicalProfile(
             @AuthenticationPrincipal User user,
             @PathVariable Long id) {
-        java.util.Optional<com.safecircle.dto.MedicalProfileDTO> profile = familyMemberService.getFamilyMemberMedicalProfile(user.getId(), id);
+        java.util.Optional<MedicalProfileDTO> profile = familyMemberService.getFamilyMemberMedicalProfile(user.getId(), id);
         return profile.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 }
