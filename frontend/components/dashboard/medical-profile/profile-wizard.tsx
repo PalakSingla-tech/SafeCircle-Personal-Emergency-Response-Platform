@@ -78,11 +78,14 @@ export function MedicalProfileWizard() {
   const completion = calculateCompletion(data);
 
   useEffect(() => {
-    saveDraft(data).then(() => {
-      setDraftSaved(true);
-      const t = setTimeout(() => setDraftSaved(false), 2000);
-      return () => clearTimeout(t);
-    });
+    const handler = setTimeout(() => {
+      saveDraft(data).then(() => {
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 2000);
+      });
+    }, 1000);
+
+    return () => clearTimeout(handler);
   }, [data]);
 
   const update = (key: keyof MedicalProfileData, value: string) => {

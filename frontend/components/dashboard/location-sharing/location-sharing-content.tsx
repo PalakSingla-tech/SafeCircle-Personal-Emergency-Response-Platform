@@ -500,15 +500,15 @@ export function LocationSharingContent() {
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="success" className="animate-pulse">Live</Badge>
-                <a
-                  href={`https://maps.google.com/?q=${loc.latitude},${loc.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" asChild>
+                  <a
+                    href={`https://maps.google.com/?q=${loc.latitude},${loc.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     View on Map
-                  </Button>
-                </a>
+                  </a>
+                </Button>
               </div>
             </div>
           ))}

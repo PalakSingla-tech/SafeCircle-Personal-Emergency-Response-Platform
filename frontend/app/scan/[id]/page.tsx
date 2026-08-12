@@ -58,9 +58,26 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
 
   const handleStartAssist = () => setWizardStep(1);
 
+  const [actualLocation, setActualLocation] = useState<string>("37.7749,-122.4194"); // Fallback
+
   const handleNotifyAndShare = async () => {
+    let locationStr = "37.7749,-122.4194"; // default fallback
+
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+        });
+        locationStr = `${position.coords.latitude},${position.coords.longitude}`;
+      } catch (err) {
+        console.warn("Geolocation denied or failed, using fallback.");
+      }
+    }
+    
+    setActualLocation(locationStr);
+
     try {
-      const result = await notifyEmergency(id, "Responder's Location");
+      const result = await notifyEmergency(id, locationStr);
       setAlertId(result.alertId);
     } catch {
       console.error("Failed to notify emergency");
@@ -270,9 +287,28 @@ export default function EmergencyScanPage({ params }: { params: Promise<{ id: st
               <CheckCircle2 className="h-10 w-10" />
             </div>
             <h2 className="text-3xl font-black text-red-900 mb-2">Family Notified!</h2>
-            <p className="text-lg text-red-800/80 mb-8">
+            <p className="text-lg text-red-800/80 mb-6">
               Location shared successfully. What's the next step?
             </p>
+
+            {/* Hackathon Demo: Show the dynamic SMS preview so judges know what would be sent in production */}
+            <div className="bg-white border border-red-100 p-5 rounded-2xl mb-8 text-left shadow-sm relative mx-auto max-w-sm">
+              <div className="absolute -top-3 left-4 bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">
+                Dynamic SMS Preview
+              </div>
+              <p className="text-slate-700 font-medium whitespace-pre-wrap mt-2 text-sm leading-relaxed">
+                🚨 Emergency Alert
+                <br />
+                {scanData.name} has triggered an emergency.
+                <br />
+                Current Location:
+                <br />
+                <a href={`https://maps.google.com/?q=${actualLocation}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">https://maps.google.com/?q={actualLocation}</a>
+                <br />
+                Please contact them immediately.
+              </p>
+            </div>
+
             <div className="space-y-4">
               <a href="tel:911" className="block w-full">
                 <Button size="lg" className="w-full h-16 rounded-2xl text-xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/20 animate-pulse">

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { saveLocationSharing, getLocationByAlertId, getTimeline, type LocationShareState, type TimelineEvent } from "@/lib/api";
+import { saveLocationSharing, getLocationByAlertId, getTimeline, resolveEmergencyHistory, type LocationShareState, type TimelineEvent } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 
 const TIMELINE_STEPS = [
@@ -79,7 +79,7 @@ function EmergencyActiveContent() {
           }
         },
         (error) => console.error("Error getting location", error),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 10000 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
       );
 
       return () => navigator.geolocation.clearWatch(watchId);
@@ -271,7 +271,16 @@ function EmergencyActiveContent() {
         <div className="grid gap-3 sm:grid-cols-3 relative z-10 pt-4 animate-in slide-in-from-bottom-4 fade-in duration-500 delay-500 fill-mode-both">
           <Button
             variant="destructive"
-            onClick={() => setIsStopped(true)}
+            onClick={async () => {
+              if (alertId) {
+                try {
+                  await resolveEmergencyHistory(alertId);
+                } catch (e) {
+                  console.error("Failed to resolve emergency", e);
+                }
+              }
+              setIsStopped(true);
+            }}
             className="h-14 rounded-2xl text-base font-bold sm:col-span-3 bg-red-600 text-white hover:bg-red-700 shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] transition-all"
           >
             <XCircle className="mr-2 h-5 w-5" />

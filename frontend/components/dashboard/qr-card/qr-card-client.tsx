@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { toPng, toCanvas } from "html-to-image";
 import {
   Download,
   Printer,
@@ -12,7 +13,7 @@ import {
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getQrCard, saveQrCard, type QrCardState } from "@/lib/api";
+import { getQrCard, saveQrCard, getMedicalProfile, getEmergencyContacts, type QrCardState } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import QRCode from "react-qr-code";
 
@@ -22,25 +23,103 @@ const DESIGNS: CardDesign[] = ["Wallet", "Hospital", "Minimal", "Dark", "Keychai
 export function QrCardClient() {
   const [design, setDesign] = useState<CardDesign>("Wallet");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [cardState, setCardState] = useState<QrCardState>({
+  const [cardState, setCardState] = useState<any>({
     profileId: "safe-circle-001",
     status: "active",
     lastUpdated: "Today",
     shareUrl: "https://safe-circle.app/scan/safe-circle-001",
+    name: "Update Profile",
+    dob: "N/A",
+    bloodGroup: "N/A",
+    allergies: "None",
+    contact: "None Set",
+    id: "safe-circle-001"
   });
 
+  const cardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const loadCard = async () => {
+    const loadData = async () => {
       try {
-        const data = await getQrCard();
-        setCardState(data);
+        const [card, profile, contacts] = await Promise.all([
+          getQrCard().catch(() => null),
+          getMedicalProfile().catch(() => null),
+          getEmergencyContacts().catch(() => [])
+        ]);
+
+        const primaryContact = contacts && contacts.length > 0 ? contacts[0] : null;
+
+        setCardState(prev => ({
+          ...prev,
+          ...(card || {}),
+          name: profile?.fullName || "Update Profile",
+          dob: profile?.dob || "N/A",
+          bloodGroup: profile?.bloodGroup || "N/A",
+          allergies: profile?.allergies || "None",
+          contact: primaryContact ? `${primaryContact.name} (${primaryContact.phone})` : "None Set",
+          id: card?.profileId || "safe-circle-001"
+        }));
       } catch {
         // Fall back to local placeholder state.
       }
     };
 
-    loadCard();
+    loadData();
   }, []);
+
+  const downloadPNG = async () => {
+    if (!cardRef.current) return;
+    try {
+      const dataUrl = await toPng(cardRef.current, { backgroundColor: 'transparent', pixelRatio: 3 });
+      const link = document.createElement("a");
+      link.download = `safe-circle-card-${design.toLowerCase()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Failed to generate image", err);
+    }
+  };
+
+  const printA4 = async () => {
+    if (!cardRef.current) return;
+    try {
+      const canvas = await toCanvas(cardRef.current, { backgroundColor: 'transparent', pixelRatio: 3 });
+      const imgData = canvas.toDataURL("image/png");
+      
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) return;
+      
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>SafeCircle - Print Emergency Card</title>
+            <style>
+              body { margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; height: 100vh; background: #fff; }
+              @media print {
+                @page { size: A4; margin: 0; }
+                body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              }
+              img { max-width: 90%; max-height: 90vh; object-fit: contain; }
+            </style>
+          </head>
+          <body>
+            <img src="${imgData}" />
+            <script>
+              window.onload = () => {
+                setTimeout(() => {
+                  window.print();
+                  setTimeout(() => window.close(), 500);
+                }, 500);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (err) {
+      console.error("Failed to prepare print", err);
+    }
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -107,10 +186,10 @@ export function QrCardClient() {
                   <AlertTriangle className="mr-3 h-4 w-4" /> Order NFC Smart Card
                 </Button>
               ) : null}
-              <Button variant="outline" className="w-full justify-start rounded-xl h-11">
+              <Button variant="outline" className="w-full justify-start rounded-xl h-11" onClick={downloadPNG}>
                 <Download className="mr-3 h-4 w-4 text-primary" /> Download PNG (High Res)
               </Button>
-              <Button variant="outline" className="w-full justify-start rounded-xl h-11">
+              <Button variant="outline" className="w-full justify-start rounded-xl h-11" onClick={printA4}>
                 <FileText className="mr-3 h-4 w-4 text-primary" /> Download A4 Print Sheet
               </Button>
             </div>
@@ -122,7 +201,7 @@ export function QrCardClient() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md h-full max-h-md bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
           <p className="mb-6 text-sm font-medium text-muted-foreground uppercase tracking-widest z-10">Live Preview</p>
           
-          <div className="relative z-10 w-full flex items-center justify-center animate-in zoom-in-95 duration-300" key={design}>
+          <div ref={cardRef} className="relative z-10 w-full flex items-center justify-center animate-in zoom-in-95 duration-300" key={design}>
             <EmergencyCard design={design} isGenerating={isGenerating} data={cardState} />
           </div>
         </div>
@@ -132,7 +211,7 @@ export function QrCardClient() {
 }
 
 function EmergencyCard({ design, isGenerating, data }: { design: CardDesign; isGenerating: boolean; data: QrCardState }) {
-  const isDarkText = design === "Minimal" || design === "Hospital" || design === "Sticker" || design === "Watch";
+  const isDarkText = design === "Minimal" || design === "Hospital" || design === "Sticker" || design === "Watch" || design === "NFC";
 
   // Dynamic dimensions and classes based on design
   const getContainerClasses = () => {

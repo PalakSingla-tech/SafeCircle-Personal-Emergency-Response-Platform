@@ -136,6 +136,9 @@ export interface MedicalProfilePayload {
 }
 
 export interface SettingsProfile {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
   emailNotifications: boolean;
   smsNotifications: boolean;
   twoFactor: boolean;
@@ -224,6 +227,13 @@ export async function createEmergencyContact(payload: Omit<EmergencyContact, 'id
   });
 }
 
+export async function updateEmergencyContact(id: string, payload: Omit<EmergencyContact, 'id' | 'avatarInitials' | 'verified'>) {
+  return request<EmergencyContact>(`/dashboard/emergency-contacts/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function deleteEmergencyContact(id: string) {
   return request<{ success: boolean }>('/dashboard/emergency-contacts?id=' + encodeURIComponent(id), {
     method: 'DELETE',
@@ -260,6 +270,12 @@ export async function deleteFamilyMember(id: number) {
 
 export async function getEmergencyHistory() {
   return request<EmergencyHistoryEvent[]>('/history');
+}
+
+export async function resolveEmergencyHistory(id: string | number) {
+  return request<void>(`/public/scan/alert/${encodeURIComponent(id)}/resolve`, {
+    method: 'PUT',
+  });
 }
 
 export async function getNotifications() {
@@ -435,7 +451,9 @@ export async function notifyEmergency(id: string, location?: string) {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    const errText = await response.text();
+    console.error("notifyEmergency backend error:", errText);
+    throw new Error(`Request failed with status ${response.status}: ${errText}`);
   }
 
   const data = await response.json();
@@ -474,3 +492,5 @@ export interface SharedLocation {
 export async function getSharedLocations() {
   return request<SharedLocation[]>('/location/shared-with-me');
 }
+
+

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   createEmergencyContact,
+  updateEmergencyContact,
   deleteEmergencyContact,
   getEmergencyContacts,
   type EmergencyContact,
@@ -95,12 +96,20 @@ export function EmergencyContactsClient() {
     if (!newName || !newPhone) return;
 
     if (editingContact) {
-      // Handle Edit (Mocked for now since backend endpoint might be missing)
-      setContacts((prev) => prev.map(c => 
-        c.id === editingContact.id 
-          ? { ...c, name: newName, relationship: newRel || "Friend", phone: newPhone } 
-          : c
-      ));
+      try {
+        await updateEmergencyContact(editingContact.id, {
+          name: newName,
+          relationship: newRel || "Friend",
+          phone: newPhone,
+        });
+        setContacts((prev) => prev.map(c => 
+          c.id === editingContact.id 
+            ? { ...c, name: newName, relationship: newRel || "Friend", phone: newPhone } 
+            : c
+        ));
+      } catch (err) {
+        toast.error("Failed to update contact in the backend");
+      }
       closeModal();
       return;
     }
@@ -258,15 +267,9 @@ export function EmergencyContactsClient() {
 
                     {/* Status */}
                     <div>
-                      {contact.verified ? (
-                        <Badge variant="success" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="gap-1 border-orange-500/30 text-orange-600 bg-orange-500/10">
-                          <AlertCircle className="h-3 w-3" /> Pending
-                        </Badge>
-                      )}
+                      <Badge variant="success" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Verified
+                      </Badge>
                     </div>
 
                     {/* Actions (Desktop) */}

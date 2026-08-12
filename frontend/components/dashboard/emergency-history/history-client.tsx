@@ -4,6 +4,7 @@ import { Search, Download, Calendar, MapPin, Activity, Building2, User, Clock, C
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog } from "@/components/ui/dialog";
 import { getEmergencyHistory, type EmergencyHistoryEvent } from "@/lib/api";
 
 const HISTORY_DATA = [
@@ -35,6 +36,7 @@ export function HistoryClient() {
   const [date, setDate] = useState("");
   const [events, setEvents] = useState<EmergencyHistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<EmergencyHistoryEvent | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -220,7 +222,7 @@ export function HistoryClient() {
                   {/* Card Footer */}
                   <div className="bg-muted/10 px-5 py-3 border-t border-border/50 flex justify-between items-center">
                     <span className="text-xs font-mono text-muted-foreground">ID: {event.id}</span>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs font-medium rounded-lg hover:text-primary">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs font-medium rounded-lg hover:text-primary" onClick={() => setSelectedEvent(event)}>
                       View Full Report
                     </Button>
                   </div>
@@ -234,6 +236,41 @@ export function HistoryClient() {
               Load More History
             </Button>
           </div>
+
+          <Dialog open={!!selectedEvent} onClose={() => setSelectedEvent(null)}>
+            {selectedEvent && (
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1 mb-4">
+                  <h2 className="text-xl font-bold">Emergency Report: {selectedEvent.id}</h2>
+                  <p className="text-sm text-muted-foreground">Complete details for the incident on {selectedEvent.date} at {selectedEvent.time}.</p>
+                </div>
+                <div className="grid gap-4 py-2">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="text-sm font-semibold col-span-1">Status</span>
+                    <Badge variant="outline" className={`col-span-3 w-fit ${getStatusColor(selectedEvent.status)}`}>
+                      {getStatusIcon(selectedEvent.status)} {selectedEvent.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="text-sm font-semibold col-span-1">Type</span>
+                    <span className="col-span-3 text-sm">{selectedEvent.type}</span>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="text-sm font-semibold col-span-1">Location</span>
+                    <span className="col-span-3 text-sm">{selectedEvent.location}</span>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="text-sm font-semibold col-span-1">Responder</span>
+                    <span className="col-span-3 text-sm">{selectedEvent.responder}</span>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <span className="text-sm font-semibold col-span-1">Hospital</span>
+                    <span className="col-span-3 text-sm">{selectedEvent.hospital}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Dialog>
         </div>
       )}
     </div>

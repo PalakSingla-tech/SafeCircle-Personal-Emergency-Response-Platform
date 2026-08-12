@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "react-toastify";
 
 const defaultSettings: SettingsProfile = {
+  fullName: "Loading...",
+  email: "loading...",
+  phoneNumber: "loading...",
   emailNotifications: true,
   smsNotifications: false,
   twoFactor: false,
@@ -102,6 +105,7 @@ export function SettingsContent() {
   const [settings, setSettings] = useState<SettingsProfile>(defaultSettings);
   const [activeSection, setActiveSection] = useState("profile");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -175,11 +179,13 @@ export function SettingsContent() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16 ring-2 ring-border">
-                    <AvatarFallback className="text-lg">SJ</AvatarFallback>
+                    <AvatarFallback className="text-lg">
+                      {settings.fullName ? settings.fullName.charAt(0) : "U"}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-display text-lg font-semibold">Sarah Jenkins</p>
-                    <p className="text-sm text-muted-foreground">sarah.jenkins@email.com</p>
+                    <p className="font-display text-lg font-semibold">{settings.fullName}</p>
+                    <p className="text-sm text-muted-foreground">{settings.email}</p>
                     <Badge variant="outline" className="mt-1.5">Pro Plan</Badge>
                   </div>
                 </div>
@@ -193,7 +199,7 @@ export function SettingsContent() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</p>
-                  <p className="mt-1 text-sm font-medium">+1 (555) 234-5678</p>
+                  <p className="mt-1 text-sm font-medium">{settings.phoneNumber || "Not provided"}</p>
                 </div>
                 <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Member since</p>
